@@ -3,11 +3,15 @@
 # $Id: configure.ac 96 2006-05-09 20:32:19Z thierry $
 #
 
-AC_INIT(getsnmp, 0.3)
+AC_INIT(getsnmp, 0.4)
 AC_PREREQ(2.59)
 
 # default install path
 AC_PREFIX_DEFAULT(/opt/getsnmp)
+
+export CPPFLAGS="-I/usr/local/include -I/usr/include -I/usr/pkg/include"
+export CFLAGS="-I/usr/local/include -I/usr/include -I/usr/pkg/include"
+export LDFLAGS="-L/usr/local/lib -L/lib -L/usr/lib -L/usr/pkg/lib"
 
 # Checks for programs.
 echo
@@ -47,7 +51,8 @@ echo
 echo "======================================================="
 echo " = Check for libraries"
 echo "======================================================="
-AC_CHECK_LIB([snmp], [snmp_errstring])
+AC_CHECK_LIB([crypto], [HMAC], , echo "didn't find lib crypto"; exit 1)
+AC_CHECK_LIB([netsnmp], [init_snmp], , echo "didn't find lib snmp"; exit 1)
 
 # Checks for library functions.
 echo
@@ -89,9 +94,16 @@ if test "x$with_rrd" != "xno"; then
 	echo "======================================================="
 	echo " = Check rrd avalaibility"
 	echo "======================================================="
-	AC_CHECK_HEADERS(rrd.h, , echo "didn't find rrd.h"; exit 1)
-	AC_CHECK_LIB([rrd], [rrd_update, rrd_clear_error, rrd_test_error, rrd_get_error], , echo "didn't find lib rrd"; exit 1)
-	AC_DEFINE(USE_RRD, 1, [Whether we have RRD])
+	no_rrd=0
+	AC_CHECK_HEADERS(rrd.h, , echo "didn't find rrd.h"; no_rrd=1)
+	AC_CHECK_LIB([rrd], [rrd_update], , echo "didn't find lib rrd"; no_rrd=1)
+	if test $no_rrd -eq 1; then
+		echo "-----------------------------------"
+		echo "/!\  WARNING: compile without RRD"
+		echo "-----------------------------------"
+	else
+		AC_DEFINE(USE_RRD, 1, [Whether we have RRD])
+	fi
 fi
 
 # Generate files

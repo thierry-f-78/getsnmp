@@ -29,10 +29,9 @@
 
 #define FREQ 100
 
-
-#define GETSNMP_RRD     0x00000001
-#define GETSNMP_FILE    0x00000002
-#define GETSNMP_DEFAULT 0x80000000
+#define GETSNMP_RRD            0x00000001
+#define GETSNMP_FILE           0x00000002
+#define GETSNMP_DEFAULT        0x80000000
 
 // get pour chaque oid
 struct oid_list {
@@ -50,7 +49,10 @@ struct oid_list {
 	char *dbbase;
 
 	// fichier dans lequel seront stockés les valeurs
+	int rotate;
+	char *prefix;
 	char *filename;
+	char *date_ptr;
 
 	// valeurs pour rrdtool
 	char *rrd_create[8];
@@ -66,6 +68,7 @@ struct snmp_get {
 
 	// oid
 	struct oid_list *first_oid;
+	int count_oids;
 
 	// intervalle entre deux requetes
 	int inter;
@@ -130,7 +133,9 @@ int parse_conf(char *conf_file, void *snmp_callback){
 	// compte les lignes
 	int ligne = 0;
 	// comteur usuel
-	int i;
+	int i, nul, j;
+	// used for error storage
+	char *error;
 	// base de configuration globale
 	struct {
 		int inter;
@@ -139,13 +144,17 @@ int parse_conf(char *conf_file, void *snmp_callback){
 		int timeout;
 		int version;
 		unsigned int backends;
+		int rotate;
+		char *prefix;
 	} cur_global = {
 		.inter = 300,
 		.community = def_community,
 		.retry = 0,
 		.timeout = 3,
 		.version = SNMP_VERSION_1,
-		.backends = GETSNMP_RRD | GETSNMP_DEFAULT
+		.backends = GETSNMP_RRD | GETSNMP_DEFAULT,
+		.rotate = 0,
+		.prefix = NULL
 	};
 	// base de configuration par machine
 	struct {
@@ -156,9 +165,13 @@ int parse_conf(char *conf_file, void *snmp_callback){
 		int retry;
 		int inter;
 		unsigned int backends;
+		int rotate;
+		char *prefix;
 	} cur_base = {
 		.ip = NULL,
-		.community = NULL
+		.community = NULL,
+		.rotate = 0,
+		.prefix = NULL
 	};
 	// config d'une recuperation snmp
 	struct snmp_get cur_snmp;
@@ -250,6 +263,12 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						
 					case 2:
 						config[i].valeur.integer = convert_boolean(args[1]);
+						if ( config[i].valeur.integer == ERROR ) {
+							logmsg(LOG_ERR,
+							       "file %s, line %d: %s: invalid value for boolean (%s)",
+							       config_file, ligne, args[0], args[1]);
+							goto end_parse_error;
+						}
 						break;
 
 					case 3:
@@ -308,6 +327,37 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					goto end_parse_error;
 				}
 				cur_global.inter = atoi(args[2]);
+			}
+
+			// set global rotate
+			else if(strcmp("rotate", args[1])==0){
+				if(arg < 3){
+					logmsg(LOG_ERR, 
+					       "file %s, line %d: global rotate: value not found",
+					       config_file, ligne);
+					goto end_parse_error;
+				}
+				cur_global.rotate = convert_boolean(args[2]);
+				if ( cur_global.rotate == ERROR ) {
+					cur_global.rotate = convert_int(args[2]);
+					/*
+					logmsg(LOG_ERR, 
+					       "file %s, line %d: global rotate: invalid value (%s)",
+					       config_file, ligne, args[2]);
+					goto end_parse_error;
+					*/
+				}
+			}
+
+			// set global prefix
+			else if(strcmp("prefix", args[1])==0){
+				if(arg < 3){
+					logmsg(LOG_ERR, 
+					       "file %s, line %d: global prefix: value not found",
+					       config_file, ligne);
+					goto end_parse_error;
+				}
+				cur_global.prefix = strdup(args[2]);
 			}
 
 			// recupere le nombre global de retry
@@ -374,6 +424,11 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					// positionne le backend rrd
 					if(strcmp(args[i], "rrd")==0){
 						cur_global.backends |= GETSNMP_RRD;
+						#ifndef USE_RRD
+						logmsg(LOG_ERR,
+						       "file %s, line %d: the option \"backend rrd\" dont take effect",
+						       config_file, ligne);
+						#endif
 					}
 
 					// positionne le backend file
@@ -434,6 +489,8 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			cur_base.version = cur_global.version;
 			cur_base.community = strdup(cur_global.community);
 			cur_base.backends = cur_global.backends | GETSNMP_DEFAULT;
+			cur_base.prefix = cur_global.prefix;
+			cur_base.rotate = cur_global.rotate;
 
 			i = 1;
 			while(i < arg){
@@ -468,6 +525,11 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					if((cur_base.backends & GETSNMP_DEFAULT) != 0){
 						cur_base.backends = 0;
 					}
+					#ifndef USE_RRD
+					logmsg(LOG_ERR,
+					       "file %s, line %d: the option \"backend_rrd\" dont take effect",
+					       config_file, ligne);
+					#endif
 					cur_base.backends |= GETSNMP_RRD;
 					i++;
 				}
@@ -477,6 +539,42 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 					cur_base.backends |= GETSNMP_FILE;
 					i++;
+				}
+
+				// rotate option
+				else if(strcmp("rotate", args[i])==0){
+					if(arg <= i + 1) {
+						logmsg(LOG_ERR, 
+						       "file %s, line %d: rotate: value not found",
+						       config_file, ligne);
+						goto end_parse_error;
+					}
+					cur_base.rotate = convert_boolean(args[i+1]);
+					if(cur_base.rotate == ERROR) {
+						cur_global.rotate = convert_int(args[2]);
+						/*
+						logmsg(LOG_ERR, 
+						       "file %s, line %d: rotate: invalid value (%s)",
+						       config_file, ligne, args[i+1]);
+						goto end_parse_error;
+						*/
+					}
+					i += 2;
+				}
+
+				// prefix option
+				else if(strcmp("prefix", args[i])==0){
+					if(arg <= i + 1) {
+						logmsg(LOG_ERR, 
+						       "file %s, line %d: prefix: value not found",
+						       config_file, ligne);
+						goto end_parse_error;
+					}
+					if ( cur_base.prefix != NULL) {
+						free(cur_base.prefix);
+					}
+					cur_base.prefix = strdup(args[i+1]);
+					i += 2;
 				}
 
 				// recupere l'ip de la machine
@@ -595,6 +693,8 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			// initialise le fichier
 			cur_oid->dbbase = NULL;
 			cur_oid->filename = NULL;
+			cur_oid->prefix = strdup(cur_base.prefix);
+			cur_oid->rotate = cur_base.rotate;
 			
 			i = 1;
 			while(i < arg){
@@ -624,6 +724,11 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					if((cur_oid->backends & GETSNMP_DEFAULT) != 0){
 						cur_oid->backends = 0;
 					}
+					#ifndef USE_RRD
+					logmsg(LOG_ERR,
+					       "file %s, line %d: the option \"backend_rrd\" dont take effect",
+					       config_file, ligne);
+					#endif
 					cur_oid->backends |= GETSNMP_RRD;
 					i++;
 				}
@@ -633,6 +738,42 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 					cur_oid->backends |= GETSNMP_FILE;
 					i++;
+				}
+
+				// rotate option
+				else if(strcmp("rotate", args[i])==0){
+					if(arg <= i + 1) {
+						logmsg(LOG_ERR, 
+						       "file %s, line %d: rotate: value not found",
+						       config_file, ligne);
+						goto end_parse_error;
+					}
+					cur_oid->rotate = convert_boolean(args[i+1]);
+					if(cur_oid->rotate == ERROR) {
+						cur_global.rotate = convert_int(args[2]);
+						/*
+						logmsg(LOG_ERR, 
+						       "file %s, line %d: rotate: invalid value (%s)",
+						       config_file, ligne, args[i+1]);
+						goto end_parse_error;
+						*/
+					}
+					i += 2;
+				}
+
+				// prefix option
+				else if(strcmp("prefix", args[i])==0){
+					if(arg <= i + 1) {
+						logmsg(LOG_ERR, 
+						       "file %s, line %d: prefix: value not found",
+						       config_file, ligne);
+						goto end_parse_error;
+					}
+					if ( cur_oid->prefix != NULL) {
+						free(cur_oid->prefix);
+					}
+					cur_oid->prefix = strdup(args[i+1]);
+					i += 2;
 				}
 
 				// recupère le timeout
@@ -719,6 +860,11 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						       config_file, ligne, args[i + 1]);
 						goto end_parse_error;
 					}
+					#ifndef USE_RRD
+					logmsg(LOG_ERR,
+					       "file %s, line %d: the option \"type %s\" dont take effect",
+					       config_file, ligne, args[i+1]);
+					#endif
 					i += 2;
 				}
 
@@ -746,14 +892,16 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			while(snmpget != NULL){
 				if(snmpget->inter == cur_snmp.inter &&
 				   snmpget->timeout == cur_snmp.timeout &&
-				   snmpget->lock == cur_snmp.lock){
+				   snmpget->lock == cur_snmp.lock &&
+					// check if the structur is full
+					snmpget->count_oids < config[CF_MAXOID].valeur.integer) {
 					break;
 				}
 				snmpget = snmpget->next;
 			}
 
 			// il faut creer une nouvelle valeur a scheduler
-			while(snmpget == NULL){
+			if(snmpget == NULL){
 				// alloc
 				snmpget = (struct snmp_get *)
 				          calloc(1, sizeof(struct snmp_get));
@@ -776,10 +924,18 @@ int parse_conf(char *conf_file, void *snmp_callback){
 
 				// fin de parsing: ouvre la session
 				snmpget->sess = snmp_open(&sess);
+				if(snmpget->sess == NULL){
+					snmp_error(&sess, &nul, &nul, &error);
+					logmsg(LOG_ERR,
+					       "[%s %d] snmp_open: %s",
+					       __FILE__, __LINE__, error);
+					return(-1);
+				}
 			}
 
 			cur_oid->next = snmpget->first_oid;
 			snmpget->first_oid = cur_oid;
+			snmpget->count_oids++;
 		}
 
 		// 
@@ -814,8 +970,23 @@ int parse_conf(char *conf_file, void *snmp_callback){
 
 			// gere le fichier de file par defaut;
 			if(cur_oid->filename == NULL){
-				snprintf(buf, MAX_LEN, "%s_%s.log",
-				         snmpget->sess->peername, cur_oid->oidname);
+				if(cur_oid->prefix != NULL){
+					if(cur_oid->rotate != FALSE){
+						snprintf(buf, MAX_LEN, "%s_%s_%s.\1YYYmmddHHMMSS.log",
+						         cur_oid->prefix, snmpget->sess->peername, cur_oid->oidname);
+					} else {
+						snprintf(buf, MAX_LEN, "%s_%s_%s.log",
+						         cur_oid->prefix, snmpget->sess->peername, cur_oid->oidname);
+					}
+				} else {
+					if(cur_oid->rotate != FALSE){
+						snprintf(buf, MAX_LEN, "%s_%s.\1YYYYmmddHHMMSS.log",
+						         snmpget->sess->peername, cur_oid->oidname);
+					} else {
+						snprintf(buf, MAX_LEN, "%s_%s.log",
+						         snmpget->sess->peername, cur_oid->oidname);
+					}
+				}
 				parse = buf;
 				while(*parse != 0){
 					if(*parse == ':'){
@@ -830,6 +1001,13 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			         config[CF_DIRDB].valeur.string, cur_oid->filename);
 			free(cur_oid->filename);
 			cur_oid->filename = strdup(buf);
+			if(cur_oid->rotate != FALSE){
+				j = 0;
+				while(cur_oid->filename[j] != '\1'){
+					j++;
+				}
+				cur_oid->date_ptr = &cur_oid->filename[j];
+			}
 
 			// initialise rrdtool for create base
 			cur_oid->rrd_create[0] = "rrdcreate";
@@ -933,6 +1111,9 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 	FILE *fd;
 	int code_ret;
 	unsigned int value;
+	time_t last_date;
+	struct tm *tm;
+	char cur_date[15];
 
 	// on deverouille le lock du groupe dédié au serveur
 	*host->lock = 0;
@@ -1071,22 +1252,32 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 					// conversion
 					
 					// open for append
+					if(cur_oid->rotate != FALSE) {
+						last_date = (time_t)current_t.tv_sec;
+						last_date /= cur_oid->rotate;
+						last_date *= cur_oid->rotate;
+						tm = localtime(&last_date);
+						snprintf(cur_date, 15, "%04d%02d%02d%02d%02d%02d",
+						         tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
+						         tm->tm_hour, tm->tm_min, tm->tm_sec);
+						memcpy(cur_oid->date_ptr, cur_date, 14);
+					}
 					fd = fopen(cur_oid->filename, "a");
 					if(fd == NULL){
 						logmsg(LOG_ERR, "fopen(%s, \"a\")[%d]: %s",
 						       cur_oid->filename, errno, strerror(errno));
-						exit(1);
+						// exit(1);
 					}
 
 					// write values
-					fprintf(fd, "%d %d\n", (unsigned int)current_t.tv_sec, value);
+					fprintf(fd, "%u %u\n", (unsigned int)current_t.tv_sec, (unsigned int)value);
 
 					// close fd
 					code_ret = fclose(fd);
 					if(code_ret != 0){
 						logmsg(LOG_ERR, "fclose(%s)[%d]: %s",
 						       cur_oid->filename, errno, strerror(errno));
-						exit(1);
+						// exit(1);
 					}
 					
 				}

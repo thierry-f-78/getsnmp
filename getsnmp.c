@@ -166,7 +166,8 @@ int parse_conf(char *conf_file, void *snmp_callback){
 		return(-1);
 	}
 
-	while(!feof(file)){
+	while(feof(file) == 0){
+		bzero(buf, MAX_LEN);
 		fgets(buf, MAX_LEN, file);
 		ligne ++;
 		

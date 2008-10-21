@@ -1,0 +1,144 @@
+###############################################
+# global config section
+###############################################
+# default "./"
+directorydb @db_dir@
+
+# file used for store pid number 
+# and lock the process
+lockfile @pid_dir@/getsnmp.pid
+
+# run in daemon mode (fork) ?
+daemon no
+
+# security section
+# mask for file creation
+umask 0133
+
+# user running application
+# user getsnmp
+
+# directory to chroot application
+# chrootdir /var/empty
+
+# logs section
+# log this loevel
+loglevel 7
+
+# use syslog ?
+usesyslog false
+
+# use log file ?
+logfile @log_dir@/getsnmp.log
+
+
+###############################################
+# retrieve data section
+###############################################
+# default community
+# default public
+global community public
+
+# default interval among two snmp get
+# default 300
+global inter 5
+
+# default number of retry
+# default 0
+global retry 0
+
+# default request timeout (seconds)
+# default 3
+global timeout 3
+
+# default snmp protocol version
+# default v1
+global version v2c
+
+# structure:
+#
+#  the keyword "set" set a snmp host server:
+# ------------
+# set version v2c ip 192.168.10.4 timeout 3 retry 2 community public
+# ------------
+#  the option are:
+#    * ip                  server ip (must informed)
+#    inter                 interval among two snmp get (default: "global inter")
+#    version               snmp protocol version (default: "global version")
+#    timeout               request timeout (default: "global timeout")
+#    retry                 number of retry (default: "global retry")
+#    community public      community (default: "global community")
+#
+#
+#
+# the "get" keyword is used for declaring one snmp value:
+# ---------------
+# get oid IF-MIB::ifInOctets.3 inter 5 file toto type gauge
+# ---------------
+#  the option are:
+#    * oid SNMPv2-MIB::sysDescr.0   the oid (must informed)
+#    inter                          interval among two snmp get (default: inherited from the last set)
+#    file                           the db rrdtool file (default: automaticaly generated)
+#    type gauge                     type of rrdtool data (gauge, counter) (default: gauge)
+#    timeout                        request timeout (default: inherited from the last set)
+#    retry                          number of retry (default: inherited from the last set)
+#
+#
+#    ( * ) must informed
+
+
+###################################################
+# examples:
+###################################################
+
+
+###################################################
+# router
+###################################################
+set ip 192.168.10.1
+# vlan0
+get oid IF-MIB::ifInOctets.3 type counter
+get oid IF-MIB::ifOutOctets.3 type counter
+# vlan1
+get oid IF-MIB::ifInOctets.4 type counter
+get oid IF-MIB::ifOutOctets.4 type counter
+# vlan2
+get oid IF-MIB::ifInOctets.5 type counter
+get oid IF-MIB::ifOutOctets.5 type counter
+# tun0
+get oid IF-MIB::ifInOctets.7 type counter
+get oid IF-MIB::ifOutOctets.7 type counter
+# tun1
+get oid IF-MIB::ifInOctets.6 type counter
+get oid IF-MIB::ifOutOctets.6 type counter
+# cpu user / nice / system
+get oid UCD-SNMP-MIB::ssCpuRawUser.0 type counter
+get oid UCD-SNMP-MIB::ssCpuRawNice.0 type counter
+get oid UCD-SNMP-MIB::ssCpuRawSystem.0 type counter
+get oid UCD-SNMP-MIB::ssCpuRawIdle.0 type counter
+get oid UCD-SNMP-MIB::ssCpuRawKernel.0 type counter
+# mem
+get oid UCD-SNMP-MIB::memTotalReal.0 type gauge
+get oid UCD-SNMP-MIB::memAvailReal.0 type gauge
+get oid UCD-SNMP-MIB::memCached.0 type gauge
+
+
+###################################################
+# server
+###################################################
+set ip 192.168.10.2
+get oid IF-MIB::ifInOctets.2 type counter
+get oid IF-MIB::ifOutOctets.2 type counter
+# cpu user / nice / system
+get oid UCD-SNMP-MIB::ssCpuRawUser.0 type counter
+get oid UCD-SNMP-MIB::ssCpuRawNice.0 type counter
+get oid UCD-SNMP-MIB::ssCpuRawSystem.0 type counter
+get oid UCD-SNMP-MIB::ssCpuRawIdle.0 type counter
+get oid UCD-SNMP-MIB::ssCpuRawKernel.0 type counter
+# mem
+get oid UCD-SNMP-MIB::memTotalReal.0 type gauge
+get oid UCD-SNMP-MIB::memAvailReal.0 type gauge
+get oid UCD-SNMP-MIB::memCached.0 type gauge
+# disque
+get oid HOST-RESOURCES-MIB::hrStorageUsed.7 type gauge
+

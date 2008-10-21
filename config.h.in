@@ -1,0 +1,14 @@
+/*
+ * Popyright (c) 2005-2010 Thierry FOURNIER
+ * $Id: configure.ac 96 2006-05-09 20:32:19Z thierry $
+ */
+
+// version
+#undef PACKAGE_VERSION
+#undef PACKAGE_NAME
+
+// use syslog ?
+#undef USE_SYSLOG
+
+// debug
+#undef DEBUG_SCHEDULER

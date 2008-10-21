@@ -1,0 +1,43 @@
+#
+# Copyright (c) 2005-2010 Thierry FOURNIER
+# $Id: Makefile.in 303 2006-10-16 09:21:24Z thierry $
+# 
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+sbindir = @sbindir@
+libexecdir = @libexecdir@
+datadir = @datadir@
+sysconfdir = @sysconfdir@
+sharedstatedir = @sharedstatedir@
+localstatedir = @localstatedir@
+libdir = @libdir@
+infodir = @infodir@
+mandir = @mandir@
+includedir = @includedir@
+config_dir = @sysconfdir@/getsnmp
+leases_dir = @localstatedir@/lib/getsnmp
+lock_dir = @localstatedir@/run
+log_dir = @localstatedir@/log
+src_dir = .
+
+CC = @CC@
+LIBS = @LIBS@
+OBJ = getsnmp.o server.o log.o loadconfig.o
+CFLAGS = -Wall -g \
+         -DPID_FILE=\"$(lock_dir)/getsnmp.pid\" \
+         -DCONFIG_FILE=\"$(sysconfdir)/getsnmp.conf\"
+
+getsnmp: $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -o getsnmp $(OBJ)
+
+clean:
+	rm -f *.o getsnmp
+
+mrproper: clean
+	rm -rf autom4te.cache config.h Makefile install.sh
+	rm -rf configure config.status config.log
+
+install:
+	/bin/sh -x install.sh

@@ -16,6 +16,7 @@
 
 char msg[4096];
 int dump = 0;
+int display_conf = 0;
 
 void miseenforme(char*);
 void miseenmemoire(char*);
@@ -32,6 +33,7 @@ void usage(){
 	"    [-D log_level] [-v][-h][-d][-f config_file]\n"
 	"\n"
 	"    -D log level required (must from 0 to 7)\n"
+	"    -s show configuration\n"
 	"    -f config file fir this session\n"
 	"    -d run as daemon\n"
 	"    -h this help\n"
@@ -139,6 +141,11 @@ void config_cmd(int argc, char *argv[]){
 
 				case 'd':
 					config[CF_DAEMON].valeur.integer = TRUE;
+					break;
+
+				case 's':
+					display_conf = 1;
+					i++;
 					break;
 
 				default:

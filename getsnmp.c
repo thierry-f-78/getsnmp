@@ -102,6 +102,9 @@ struct snmp_get *sched = NULL;
 // pointe sur les erreurs
 extern int errno;
 
+// displaying configuration
+extern int display_conf;
+
 // nombre maximun d'arguments sur une ligne
 #define MAX_ARGS 50
 // taille du buffer de lecture ligne à ligne
@@ -114,6 +117,10 @@ static char * rrd_type_derive = "DERIVE";
 static char * rrd_type_absolute = "ABSOLUTE";
 static char * rrd_rra_type_average = "AVERAGE";
 static char * rrd_rra_type_max = "MAX";
+
+void dump_config(void) {
+	exit(0);
+}
 
 /* Parse le fichier de conf
  *
@@ -1480,6 +1487,10 @@ int main (int argc, char **argv){
 
 	// parse command line
 	config_cmd(argc, argv);
+
+	// dump configuration if needed
+	if (display_conf == 1)
+		dump_config();
 
 	// initilization of log system
 	initlog();

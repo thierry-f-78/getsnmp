@@ -88,6 +88,9 @@ version
     set the default backends used for logging values. 
     the default value is 'rrd'
 .TP
+\fBglobal prefix\fR string
+    prefix data file default ""
+.TP
 \fBset\fR
     the keyword "set" set a snmp host server:
 
@@ -103,6 +106,7 @@ version
     \fBcommunity\fR    community (default: "global community")
     \fBbackend_rrd\fR  use rrd backend backend (default: "global backend")
     \fBbackend_file\fR use rrd backend backend (default: "global backend")
+    \fBprefix\fR       set prefix for data file (default: "global prefix")
     ( * ) must informed 
 .TP
 \fBget\fR
@@ -112,15 +116,20 @@ version
     get oid IF-MIB::ifInOctets.3 inter 5 file toto type gauge
 
     the option are:
-    * \fBoid\fR        (SNMPv2-MIB::sysDescr.0) the oid (must informed)
+    * \fBoid\fR        (SNMPv2-MIB::sysDescr.0) The oid name. For making configuration
+    easy, the OID name can be extended. Ex: IF-MIB::if{In,Out}{Octets,Errors}.{1-24}.
+    The parameters filaname, dataname and file can be match this variables with this
+    syntax ${1}, ${2}, ... (this parameter must informed)
     \fBinter\fR        interval among two snmp get (default: inherited from the last set)
     \fBbackend_rrd\fR  use rrd backend backend (default: inherited from the last set)
     \fBbackend_file\fR use rrd backend backend (default: inherited from the last set)
-    \fBfile\fR         the db rrdtool file (default: automaticaly generated)
-    \fBfilename\fR     the values file (default: automaticaly generated)
+    \fBfile\fR         the db rrdtool file (default: automaticaly generated from OID)
+    \fBfilename\fR     the values file (default: automaticaly generated from OID)
+    \fBdataname\fR     the name of the data getted (default: automaticaly generated from OID)
     \fBtype\fR         type of rrdtool data (gauge, counter) (default: gauge)
     \fBtimeout\fR      request timeout (default: inherited from the last set)
     \fBretry\fR        number of retry (default: inherited from the last set)
+    \fBprefix\fR       set prefix for data file (default: inherited from the last set)
     ( * ) must informed
 .\"
 .\" CONFIG FILE

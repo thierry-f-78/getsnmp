@@ -24,7 +24,7 @@ src_dir = .
 
 CC = @CC@
 LIBS = @LIBS@
-OBJ = getsnmp.o server.o log.o loadconfig.o
+OBJ = getsnmp.o server.o log.o loadconfig.o expand.o
 CFLAGS = -Wall -g \
          -DPID_FILE=\"$(lock_dir)/getsnmp.pid\" \
          -DCONFIG_FILE=\"$(sysconfdir)/getsnmp/getsnmp.conf\" \

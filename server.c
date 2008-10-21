@@ -90,8 +90,10 @@ void separe(void){
 	// open lock/pid file
 	fd = open(config[CF_LOCKFILE].valeur.string, O_RDWR | O_CREAT, 0640);
 	if(fd < 0){
-		logmsg(LOG_ERR, "[%s %i] open[%d]: %s",
-		       __FILE__, __LINE__, errno, strerror(errno));
+		logmsg(LOG_ERR, "[%s %i] open(%s): %s",
+		       __FILE__, __LINE__,
+		       config[CF_LOCKFILE].valeur.string,
+		       strerror(errno));
 		exit(1);
 	}
 	

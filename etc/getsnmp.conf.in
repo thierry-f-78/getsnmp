@@ -143,6 +143,11 @@ get oid UCD-SNMP-MIB::memTotalReal.0 type gauge
 get oid UCD-SNMP-MIB::memAvailReal.0 type gauge
 get oid UCD-SNMP-MIB::memCached.0 type gauge
 
+###################################################
+# router with extended syntax
+###################################################
+set ip 192.168.10.1
+get oid IF-MIB::if{In,Out}Octets.{3-7} type counter dataname if${1}Octets{$2} filename routeur_if
 
 ###################################################
 # server

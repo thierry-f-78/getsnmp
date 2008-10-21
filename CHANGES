@@ -1,3 +1,7 @@
+0.6:     infos at getsnmp dot 1s dot fr
+         * extend configuration file possibilities for making
+           this more simply
+
 0.5:     infos at getsnmp dot 1s dot fr
          * prevent segfault in error log
 

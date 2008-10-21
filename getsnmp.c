@@ -26,6 +26,7 @@
 #include "log.h"
 #include "server.h"
 #include "loadconfig.h"
+#include "expand.h"
 
 #define FREQ 100
 
@@ -52,6 +53,7 @@ struct oid_list {
 	int rotate;
 	char *prefix;
 	char *filename;
+	char *dataname;
 	char *date_ptr;
 
 	// valeurs pour rrdtool
@@ -178,13 +180,15 @@ int parse_conf(char *conf_file, void *snmp_callback){
 	struct snmp_get *snmpget;
 	// liste d'oid;
 	//struct oid_list *oidlist;
-	struct oid_list *cur_oid;
+	struct oid_list cur_oid, *tmp_oid;
 	// structure permettant l'ouverture de la session snmp
 	struct snmp_session sess;
 	// pointeur sur le verrous partagé
 	int *lock;
 	// valeur de retour
 	int return_val = 1;
+	// pour l'expanssion des noms
+	struct expcell *names;
 
 	file = fopen(conf_file, "r");
 	if(file == NULL){
@@ -476,6 +480,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			}
 			if(cur_base.ip != NULL){
 				free(cur_base.ip);
+				cur_base.ip = NULL;
 			}
 			if(cur_base.community != NULL){
 				free(cur_base.community);
@@ -663,10 +668,6 @@ int parse_conf(char *conf_file, void *snmp_callback){
 				goto end_parse_error;
 			}
 
-			// cree un nouvel oid get
-			cur_oid = (struct oid_list *)
-			          calloc(1, sizeof(struct oid_list));
-
 			// initialise le systeme
 			snmp_sess_init(&sess);
 			// positionne la version
@@ -681,20 +682,26 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			// positionne le timeout
 			sess.timeout = cur_base.timeout * 1000000;
 			sess.retries = cur_base.retry;
+	
 			cur_snmp.lock = lock;
 			cur_snmp.timeout = cur_base.timeout;
 			cur_snmp.actif = 0;
 			// default value for inter
 			cur_snmp.inter = cur_base.inter;
 			// default value for inter
-			cur_oid->rrd_type = rrd_type_gauge;
+			cur_oid.rrd_type = rrd_type_gauge;
 			// flags backend
-			cur_oid->backends = cur_base.backends | GETSNMP_DEFAULT;
+			cur_oid.backends = cur_base.backends | GETSNMP_DEFAULT;
 			// initialise le fichier
-			cur_oid->dbbase = NULL;
-			cur_oid->filename = NULL;
-			cur_oid->prefix = strdup(cur_base.prefix);
-			cur_oid->rotate = cur_base.rotate;
+			cur_oid.dbbase = NULL;
+			cur_oid.filename = NULL;
+			cur_oid.dataname = NULL;
+			if(cur_base.prefix != NULL) {
+				cur_oid.prefix = strdup(cur_base.prefix);
+			} else {
+				cur_oid.prefix = NULL;
+			}
+			cur_oid.rotate = cur_base.rotate;
 			
 			i = 1;
 			while(i < arg){
@@ -706,37 +713,28 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						       config_file, ligne);
 						goto end_parse_error;
 					}
-					cur_oid->oidname = strdup(args[i+1]);
-					cur_oid->oidlen = sizeof(cur_oid->oid) / 
-					                  sizeof(cur_oid->oid[0]);
-					if(!read_objid(args[i+1], cur_oid->oid,
-					               (size_t *)&cur_oid->oidlen)){
-						logmsg(LOG_ERR, 
-						       "file %s, line %d: oid incorrect",
-						       config_file, ligne);
-						goto end_parse_error;
-					}
+					cur_oid.oidname = strdup(args[i+1]);
 					i += 2;
 				}
 
 				// positionne les backends
 				else if(strcmp("backend_rrd", args[i])==0){
-					if((cur_oid->backends & GETSNMP_DEFAULT) != 0){
-						cur_oid->backends = 0;
+					if((cur_oid.backends & GETSNMP_DEFAULT) != 0){
+						cur_oid.backends = 0;
 					}
 					#ifndef USE_RRD
 					logmsg(LOG_ERR,
 					       "file %s, line %d: the option \"backend_rrd\" dont take effect",
 					       config_file, ligne);
 					#endif
-					cur_oid->backends |= GETSNMP_RRD;
+					cur_oid.backends |= GETSNMP_RRD;
 					i++;
 				}
 				else if(strcmp("backend_file", args[i])==0){
-					if((cur_oid->backends & GETSNMP_DEFAULT) != 0){
-						cur_oid->backends = 0;
+					if((cur_oid.backends & GETSNMP_DEFAULT) != 0){
+						cur_oid.backends = 0;
 					}
-					cur_oid->backends |= GETSNMP_FILE;
+					cur_oid.backends |= GETSNMP_FILE;
 					i++;
 				}
 
@@ -748,15 +746,9 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						       config_file, ligne);
 						goto end_parse_error;
 					}
-					cur_oid->rotate = convert_boolean(args[i+1]);
-					if(cur_oid->rotate == ERROR) {
+					cur_oid.rotate = convert_boolean(args[i+1]);
+					if(cur_oid.rotate == ERROR) {
 						cur_global.rotate = convert_int(args[2]);
-						/*
-						logmsg(LOG_ERR, 
-						       "file %s, line %d: rotate: invalid value (%s)",
-						       config_file, ligne, args[i+1]);
-						goto end_parse_error;
-						*/
 					}
 					i += 2;
 				}
@@ -769,10 +761,10 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						       config_file, ligne);
 						goto end_parse_error;
 					}
-					if ( cur_oid->prefix != NULL) {
-						free(cur_oid->prefix);
+					if ( cur_oid.prefix != NULL) {
+						free(cur_oid.prefix);
 					}
-					cur_oid->prefix = strdup(args[i+1]);
+					cur_oid.prefix = strdup(args[i+1]);
 					i += 2;
 				}
 
@@ -813,7 +805,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					i += 2;
 				}
 
-				// recupere le noms de la base
+				// get rrd database name
 				else if(strcmp("file", args[i]) == 0){
 					if(arg <= i + 1){
 						logmsg(LOG_ERR, 
@@ -821,11 +813,11 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						       config_file, ligne);
 						goto end_parse_error;
 					}
-					cur_oid->dbbase = strdup(args[i+1]);
+					cur_oid.dbbase = strdup(args[i+1]);
 					i += 2;
 				}
 
-				// recupere le noms du fichier de logs
+				// get log file name
 				else if(strcmp("filename", args[i]) == 0){
 					if(arg <= i + 1){
 						logmsg(LOG_ERR, 
@@ -833,7 +825,19 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						       config_file, ligne);
 						goto end_parse_error;
 					}
-					cur_oid->dbbase = strdup(args[i+1]);
+					cur_oid.filename = strdup(args[i+1]);
+					i += 2;
+				}
+
+				// get data name
+				else if(strcmp("dataname", args[i]) == 0){
+					if(arg <= i + 1){
+						logmsg(LOG_ERR, 
+						       "file %s, line %d: dataname: value not found",
+						       config_file, ligne);
+						goto end_parse_error;
+					}
+					cur_oid.dataname = strdup(args[i+1]);
 					i += 2;
 				}
 
@@ -846,13 +850,13 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						goto end_parse_error;
 					}
 					if(strcmp("gauge", args[i+1]) == 0)
-						cur_oid->rrd_type = rrd_type_gauge;
+						cur_oid.rrd_type = rrd_type_gauge;
 					else if(strcmp("counter", args[i+1]) == 0)
-						cur_oid->rrd_type = rrd_type_counter;
+						cur_oid.rrd_type = rrd_type_counter;
 					else if(strcmp("derive", args[i+1]) == 0)
-						cur_oid->rrd_type = rrd_type_derive;
+						cur_oid.rrd_type = rrd_type_derive;
 					else if(strcmp("absolute", args[i+1]) == 0)
-						cur_oid->rrd_type = rrd_type_absolute;
+						cur_oid.rrd_type = rrd_type_absolute;
 					else {
 						logmsg(LOG_ERR, 
 						       "file %s, line %d: "
@@ -876,69 +880,115 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					goto end_parse_error;
 				}
 			}
-			// fin de parsing GET
-			// check timeouts error
-			if(sess.timeout > cur_snmp.inter * 1000000){
-				logmsg(LOG_WARNING, 
-				       "WARNING: [ %s -> %s ] timeout(%d) is biger then "
-				       "get interval(%d)",
-						 sess.peername, cur_oid->oidname,
-						 sess.timeout / 1000000, cur_snmp.inter);
-			}
 
-			// recherche une precedente structure presentant
-			// les meme qualités
-			snmpget = sched;
-			while(snmpget != NULL){
-				if(snmpget->inter == cur_snmp.inter &&
-				   snmpget->timeout == cur_snmp.timeout &&
-				   snmpget->lock == cur_snmp.lock &&
-					// check if the structur is full
-					snmpget->count_oids < config[CF_MAXOID].valeur.integer) {
-					break;
+			// étend le nom et l'oid
+			names = expand_names(cur_oid.oidname, 
+			                     cur_oid.dataname,
+										cur_oid.filename,
+										cur_oid.dbbase);
+			if (names == NULL) {
+				logmsg(LOG_ERR,
+				       "file %s, line %d: expansion error",
+				       config_file, ligne);
+			}
+			free(cur_oid.oidname);
+			if(cur_oid.filename == NULL)
+				free(cur_oid.filename);
+			if(cur_oid.dataname == NULL)
+				free(cur_oid.dataname);
+			if(cur_oid.dbbase == NULL)
+				free(cur_oid.dbbase);
+
+			while(names != NULL) {
+
+				// fin de parsing GET
+				// check timeouts error
+				if(sess.timeout > cur_snmp.inter * 1000000){
+					logmsg(LOG_WARNING, 
+					       "WARNING: [ %s -> %s ] timeout(%d) is biger then "
+					       "get interval(%d)",
+							 sess.peername, tmp_oid->oidname,
+							 sess.timeout / 1000000, cur_snmp.inter);
 				}
-				snmpget = snmpget->next;
-			}
 
-			// il faut creer une nouvelle valeur a scheduler
-			if(snmpget == NULL){
-				// alloc
-				snmpget = (struct snmp_get *)
-				          calloc(1, sizeof(struct snmp_get));
+				// recherche une precedente structure presentant
+				// les meme qualités
+				snmpget = sched;
+				while(snmpget != NULL){
+					if(snmpget->inter == cur_snmp.inter &&
+					   snmpget->timeout == cur_snmp.timeout &&
+					   snmpget->lock == cur_snmp.lock &&
+						// check if the structur is full
+						snmpget->count_oids < config[CF_MAXOID].valeur.integer) {
+						break;
+					}
+					snmpget = snmpget->next;
+				}
+	
+				// create a new paquet of questions
 				if(snmpget == NULL){
+					// alloc
+					snmpget = (struct snmp_get *)
+					          calloc(1, sizeof(struct snmp_get));
+					if(snmpget == NULL){
+						logmsg(LOG_ERR, 
+						       "[%s %d] calloc: %s",
+						       __FILE__, __LINE__, strerror(errno));
+						fclose(file);
+						return(-1);
+					}
+					// copie des valeurs
+					memcpy(snmpget, &cur_snmp, sizeof(struct snmp_get));
+	
+					// chainage
+					snmpget->next = sched;
+					sched = snmpget;
+	
+					// passe en parametre l'objet lui meme
+					sess.callback_magic = snmpget;
+	
+					// fin de parsing: ouvre la session
+					snmpget->sess = snmp_open(&sess);
+					if(snmpget->sess == NULL){
+						snmp_error(&sess, &nul, &nul, &error);
+						logmsg(LOG_ERR,
+						       "[%s %d] snmp_open: %s",
+						       __FILE__, __LINE__, error);
+						return(-1);
+					}
+				}
+	
+				// create oid list node
+				tmp_oid = (struct oid_list *)
+				          calloc(1, sizeof(struct oid_list));
+				memcpy(tmp_oid, &cur_oid, sizeof(struct oid_list));
+
+				// check oid name
+				tmp_oid->oidname = names->oid;
+				tmp_oid->oidlen = sizeof(tmp_oid->oid) / 
+				                  sizeof(tmp_oid->oid[0]);
+				if(!read_objid(tmp_oid->oidname, tmp_oid->oid,
+				               (size_t *)&tmp_oid->oidlen)){
 					logmsg(LOG_ERR, 
-					       "[%s %d] calloc: %s",
-					       __FILE__, __LINE__, strerror(errno));
-					fclose(file);
-					return(-1);
+					       "file %s, line %d: oid \"%s\" incorrect",
+					       config_file, ligne, names->oid);
+					goto end_parse_error;
 				}
-				// copie des valeurs
-				memcpy(snmpget, &cur_snmp, sizeof(struct snmp_get));
 
-				// chainage
-				snmpget->next = sched;
-				sched = snmpget;
+				// copy replicated data
+				tmp_oid->filename = names->file;
+				tmp_oid->dataname = names->name;
+				tmp_oid->dbbase = names->rrd;
 
-				// passe en parametre l'objet lui meme
-				sess.callback_magic = snmpget;
+				// chain value
+				tmp_oid->next = snmpget->first_oid;
+				snmpget->first_oid = tmp_oid;
+				snmpget->count_oids++;
 
-				// fin de parsing: ouvre la session
-				snmpget->sess = snmp_open(&sess);
-				if(snmpget->sess == NULL){
-					snmp_error(&sess, &nul, &nul, &error);
-					logmsg(LOG_ERR,
-					       "[%s %d] snmp_open: %s",
-					       __FILE__, __LINE__, error);
-					return(-1);
-				}
+				// next name
+				names = names->next;
 			}
-
-			cur_oid->next = snmpget->first_oid;
-			snmpget->first_oid = cur_oid;
-			snmpget->count_oids++;
 		}
-
-		// 
 	}
 
 	// passe d'initialisation de rrdtool
@@ -946,13 +996,13 @@ int parse_conf(char *conf_file, void *snmp_callback){
 	while(snmpget != NULL){
 
 		// parse tous les oids
-		cur_oid = snmpget->first_oid;
-		while(cur_oid != NULL){
+		tmp_oid = snmpget->first_oid;
+		while(tmp_oid != NULL){
 
 			// gere le fichier de db par defaut;
-			if(cur_oid->dbbase == NULL){
+			if(tmp_oid->dbbase == NULL){
 				snprintf(buf, MAX_LEN, "%s_%s.db",
-				         snmpget->sess->peername, cur_oid->oidname);
+				         snmpget->sess->peername, tmp_oid->oidname);
 				parse = buf;
 				while(*parse != 0){
 					if(*parse == ':'){
@@ -960,31 +1010,31 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 					parse++;
 				}
-				cur_oid->dbbase = strdup(buf);
+				tmp_oid->dbbase = strdup(buf);
 			}
 
 			snprintf(buf, MAX_LEN, "%s/%s",
-			         config[CF_DIRDB].valeur.string, cur_oid->dbbase);
-			free(cur_oid->dbbase);
-			cur_oid->dbbase = strdup(buf);
+			         config[CF_DIRDB].valeur.string, tmp_oid->dbbase);
+			free(tmp_oid->dbbase);
+			tmp_oid->dbbase = strdup(buf);
 
 			// gere le fichier de file par defaut;
-			if(cur_oid->filename == NULL){
-				if(cur_oid->prefix != NULL){
-					if(cur_oid->rotate != FALSE){
+			if(tmp_oid->filename == NULL){
+				if(tmp_oid->prefix != NULL){
+					if(tmp_oid->rotate != FALSE){
 						snprintf(buf, MAX_LEN, "%s_%s_%s.\1YYYmmddHHMMSS.log",
-						         cur_oid->prefix, snmpget->sess->peername, cur_oid->oidname);
+						         tmp_oid->prefix, snmpget->sess->peername, tmp_oid->oidname);
 					} else {
 						snprintf(buf, MAX_LEN, "%s_%s_%s.log",
-						         cur_oid->prefix, snmpget->sess->peername, cur_oid->oidname);
+						         tmp_oid->prefix, snmpget->sess->peername, tmp_oid->oidname);
 					}
 				} else {
-					if(cur_oid->rotate != FALSE){
+					if(tmp_oid->rotate != FALSE){
 						snprintf(buf, MAX_LEN, "%s_%s.\1YYYYmmddHHMMSS.log",
-						         snmpget->sess->peername, cur_oid->oidname);
+						         snmpget->sess->peername, tmp_oid->oidname);
 					} else {
 						snprintf(buf, MAX_LEN, "%s_%s.log",
-						         snmpget->sess->peername, cur_oid->oidname);
+						         snmpget->sess->peername, tmp_oid->oidname);
 					}
 				}
 				parse = buf;
@@ -994,38 +1044,43 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 					parse++;
 				}
-				cur_oid->filename = strdup(buf);
+				tmp_oid->filename = strdup(buf);
 			}
 
+			// set default dataname
+			if (tmp_oid->dataname == NULL)
+				tmp_oid->dataname = tmp_oid->filename;
+
+			// set data path
 			snprintf(buf, MAX_LEN, "%s/%s",
-			         config[CF_DIRDB].valeur.string, cur_oid->filename);
-			free(cur_oid->filename);
-			cur_oid->filename = strdup(buf);
-			if(cur_oid->rotate != FALSE){
+			         config[CF_DIRDB].valeur.string, tmp_oid->filename);
+			free(tmp_oid->filename);
+			tmp_oid->filename = strdup(buf);
+			if(tmp_oid->rotate != FALSE){
 				j = 0;
-				while(cur_oid->filename[j] != '\1'){
+				while(tmp_oid->filename[j] != '\1'){
 					j++;
 				}
-				cur_oid->date_ptr = &cur_oid->filename[j];
+				tmp_oid->date_ptr = &tmp_oid->filename[j];
 			}
 
 			// initialise rrdtool for create base
-			cur_oid->rrd_create[0] = "rrdcreate";
+			tmp_oid->rrd_create[0] = "rrdcreate";
 
 			// le fichier
-			cur_oid->rrd_create[1] = cur_oid->dbbase;
+			tmp_oid->rrd_create[1] = tmp_oid->dbbase;
 
 			// donne l'espacement entre chaque donnée entrée
 			snprintf(buf, MAX_LEN, "-s %d", snmpget->inter);
-			cur_oid->rrd_create[2] = strdup(buf);
+			tmp_oid->rrd_create[2] = strdup(buf);
 
 			// initilize la source de données
 			snprintf(buf, MAX_LEN, "DS:value:%s:%d:U:U",
-			         cur_oid->rrd_type, snmpget->inter * 2);
-			cur_oid->rrd_create[3] = strdup(buf);
+			         tmp_oid->rrd_type, snmpget->inter * 2);
+			tmp_oid->rrd_create[3] = strdup(buf);
 
 			// choix de la technique de moyennage
-			if(cur_oid->rrd_type == rrd_type_gauge)
+			if(tmp_oid->rrd_type == rrd_type_gauge)
 				parse = rrd_rra_type_max;
 			else
 				parse = rrd_rra_type_average;
@@ -1035,35 +1090,35 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			// moyenne de 1 top de "cur_snmp->inter" chacun = 2 jours
 			snprintf(buf, MAX_LEN, "RRA:%s:0.5:1:%d",
 			         parse, ( 2 * 24 * 60 * 60 ) / ( 1 * snmpget->inter ));
-			cur_oid->rrd_create[4] = strdup(buf);
+			tmp_oid->rrd_create[4] = strdup(buf);
 
 			// calcule de la moyenne pour 2 semaines
 			// 14 jours * 24 heures * 60 minutes * 60 secondes /
 			// moyenne de 6 top de "cur_snmp->inter" chacun = 14 jours
 			snprintf(buf, MAX_LEN, "RRA:%s:0.5:6:%d",
 			         parse, ( 14 * 24 * 60 * 60 ) / ( 6 * snmpget->inter ));
-			cur_oid->rrd_create[5] = strdup(buf);
+			tmp_oid->rrd_create[5] = strdup(buf);
 
 			// calcul de la moyenne pour 2 mois
 			// 62 jours * 24 heures * 60 minutes * 60 secondes /
 			// moyenne de 24 top de "cur_snmp->inter" chacun = 62 jours
 			snprintf(buf, MAX_LEN, "RRA:%s:0.5:24:%d",
 			         parse, ( 62 * 24 * 60 * 60 ) / ( 24 * snmpget->inter));
-			cur_oid->rrd_create[6] = strdup(buf);
+			tmp_oid->rrd_create[6] = strdup(buf);
 		
 			// fin
-			cur_oid->rrd_create[7] = NULL;
+			tmp_oid->rrd_create[7] = NULL;
 
 			// initilise rrdtool for update base
-			cur_oid->rrd_update[0] = "rrdupdate";
+			tmp_oid->rrd_update[0] = "rrdupdate";
 
 			// le fichier
-			cur_oid->rrd_update[1] = cur_oid->dbbase;
+			tmp_oid->rrd_update[1] = tmp_oid->dbbase;
 
-			cur_oid->rrd_update[2] = NULL;
-			cur_oid->rrd_update[3] = NULL;
+			tmp_oid->rrd_update[2] = NULL;
+			tmp_oid->rrd_update[3] = NULL;
 
-			cur_oid = cur_oid->next;
+			tmp_oid = tmp_oid->next;
 		}
 
 		snmpget = snmpget->next;
@@ -1077,8 +1132,14 @@ int parse_conf(char *conf_file, void *snmp_callback){
 	}
 
 	// nettoyage de la memoire	
-	if(cur_base.ip != NULL) free(cur_base.ip);
-	if(cur_base.community != NULL) free(cur_base.community);
+	if(cur_base.ip != NULL) {
+		free(cur_base.ip);
+		cur_base.ip = NULL;
+	}
+	if(cur_base.community != NULL) {
+		free(cur_base.community);
+		cur_base.community = NULL;
+	}	
 	if(cur_global.community != def_community) free(cur_global.community);
 
 	fclose(file);
@@ -1270,7 +1331,10 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 					}
 
 					// write values
-					fprintf(fd, "%u %u\n", (unsigned int)current_t.tv_sec, (unsigned int)value);
+					fprintf(fd, "%u %s %u\n", 
+					        (unsigned int)current_t.tv_sec,
+					        cur_oid->dataname,
+					        (unsigned int)value);
 
 					// close fd
 					code_ret = fclose(fd);

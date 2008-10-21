@@ -94,7 +94,7 @@ global prefix myDataFile
 # ---------------
 #  the option are:
 #    * oid SNMPv2-MIB::sysDescr.0   the oid (must informed)
-#    inter                          interval among two snmp get (default: inherited from the last set)
+#    inter                          interval between two snmp get (default: inherited from the last set)
 #    file                           the db rrdtool file (default: automaticaly generated)
 #    filename                       the snmp values file (default: automaticaly generated)
 #    type gauge                     type of rrdtool data (gauge, counter) (default: gauge)
@@ -105,7 +105,7 @@ global prefix myDataFile
 #    rotate                         set rotation system time ("no" for disabled) (default: inherited from the last set)
 #    prefix                         set prefix for data file (default: inherited from the last set)
 #
-#    ( * ) must informed
+#    ( * ) mandatory
 
 
 ###################################################

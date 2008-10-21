@@ -27,7 +27,11 @@ case $1 in
 		grep "#.*include <" *.c *.h | \
 		sed -e "s/^.* <//; s/>//" | \
 		sort -u | \
-		sed -e "s/^\(.*\)/AC_CHECK_HEADERS(\1, , echo \"didn't find \1\"; exit 1)/"
+		sed -e "s/^\(.*\)/AC_CHECK_HEADERS(\1, , echo \"didn't find \1\"; exit 1)/" | \
+		while read; do
+			TEST=$( cat configure.in 2>/dev/null | grep "$REPLY" )
+			test -z "$TEST" && echo $REPLY
+		done
 		;;
 
 #	funcs)

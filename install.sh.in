@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# Copyright (c) 2005-2010 Thierry FOURNIER
+# $Id: Makefile.in 374 2006-10-25 17:32:21Z thierry $
+# 
+
+prefix="@prefix@"
+exec_prefix="@exec_prefix@"
+bindir="@bindir@"
+sbindir="@sbindir@"
+libexecdir="@libexecdir@"
+datadir="@datadir@"
+sysconfdir="@sysconfdir@"
+sharedstatedir="@sharedstatedir@"
+localstatedir="@localstatedir@"
+libdir="@libdir@"
+infodir="@infodir@"
+mandir="@mandir@"
+includedir="@includedir@"
+config_dir="@sysconfdir@/getsnmp"
+pid_dir="@localstatedir@/run"
+log_dir="@localstatedir@/log"
+db_dir="@localstatedir@/getsnmpdb"
+
+# make all directories
+mkdir -p ${DESTDIR}${sbindir}
+mkdir -p ${DESTDIR}${pid_dir}
+mkdir -p ${DESTDIR}${log_dir}
+mkdir -p ${DESTDIR}${config_dir} 
+mkdir -p ${DESTDIR}${mandir}/man8
+mkdir -p ${DESTDIR}${db_dir}
+
+# install man
+cp -f doc/getsnmp.8 ${DESTDIR}${mandir}/man8
+
+# insall binary
+cp -f getsnmp ${DESTDIR}${sbindir}
+
+# if doesn't exist conf
+if [ ! -f ${DESTDIR}${config_dir}/getsnmp.conf ]; then
+	
+	# dest file
+	CONF="${DESTDIR}${config_dir}/getsnmp.conf"
+
+else
+
+	# default dest file
+	CONF="${DESTDIR}${config_dir}/getsnmp.conf.exemple.`cat VERSION`"
+fi
+
+# gen conf file
+config_dir=`echo "${config_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
+leases_dir=`echo "${leases_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
+lock_dir=`echo "${lock_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
+log_dir=`echo "${log_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
+sed -e "
+	s/@db_dir@/${db_dir}/g;
+	s/@pid_dir@/${pid_dir}/g;
+	s/@log_dir@/${log_dir}/g;
+
+	s/@config_dir@/${config_dir}/g;
+	s/@leases_dir@/${leases_dir}/g;
+	s/@lock_dir@/${lock_dir}/g;
+" < etc/gtsnmp.conf.in > ${CONF}
+

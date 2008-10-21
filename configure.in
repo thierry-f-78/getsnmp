@@ -1,0 +1,97 @@
+#
+# Popyright (c) 2005-2010 Thierry FOURNIER
+# $Id: configure.ac 96 2006-05-09 20:32:19Z thierry $
+#
+
+AC_INIT(getsnmp, 0.0.0)
+AC_PREREQ(2.59)
+
+# default install path
+AC_PREFIX_DEFAULT(/opt/getsnmp)
+
+# Checks for programs.
+echo
+echo "======================================================="
+echo " = Check for programs"
+echo "======================================================="
+AC_PROG_CC
+
+# Checks for header files.
+echo
+echo "======================================================="
+echo " = Check for header files"
+echo "======================================================="
+AC_C_CONST
+AC_TYPE_UID_T
+AC_HEADER_TIME
+AC_STRUCT_TM
+AC_HEADER_STDC
+AC_CHECK_HEADERS(syslog.h, forcesyslogno=0, forcesyslogno=1)
+AC_CHECK_HEADERS(errno.h, , echo "didn't find errno.h"; exit 1)
+AC_CHECK_HEADERS(fcntl.h, , echo "didn't find fcntl.h"; exit 1)
+AC_CHECK_HEADERS(grp.h, , echo "didn't find grp.h"; exit 1)
+AC_CHECK_HEADERS(net-snmp/net-snmp-config.h, , echo "didn't find net-snmp/net-snmp-config.h"; exit 1)
+#AC_CHECK_HEADERS(net-snmp/net-snmp-includes.h, , echo "didn't find net-snmp/net-snmp-includes.h"; exit 1)
+AC_CHECK_HEADERS(pwd.h, , echo "didn't find pwd.h"; exit 1)
+AC_CHECK_HEADERS(rrd.h, , echo "didn't find rrd.h"; exit 1)
+AC_CHECK_HEADERS(signal.h, , echo "didn't find signal.h"; exit 1)
+AC_CHECK_HEADERS(stdarg.h, , echo "didn't find stdarg.h"; exit 1)
+AC_CHECK_HEADERS(stdio.h, , echo "didn't find stdio.h"; exit 1)
+AC_CHECK_HEADERS(stdlib.h, , echo "didn't find stdlib.h"; exit 1)
+AC_CHECK_HEADERS(string.h, , echo "didn't find string.h"; exit 1)
+AC_CHECK_HEADERS(sys/stat.h, , echo "didn't find sys/stat.h"; exit 1)
+AC_CHECK_HEADERS(sys/time.h, , echo "didn't find sys/time.h"; exit 1)
+AC_CHECK_HEADERS(sys/types.h, , echo "didn't find sys/types.h"; exit 1)
+AC_CHECK_HEADERS(time.h, , echo "didn't find time.h"; exit 1)
+AC_CHECK_HEADERS(unistd.h, , echo "didn't find unistd.h"; exit 1)
+
+# Checks for libraries.
+echo
+echo "======================================================="
+echo " = Check for libraries"
+echo "======================================================="
+# FIXME: Replace `main' with a function in `-lrrd':
+AC_CHECK_LIB([rrd], [main])
+# FIXME: Replace `main' with a function in `-lsnmp':
+AC_CHECK_LIB([snmp], [main])
+
+# Checks for library functions.
+echo
+echo "======================================================="
+echo " = Check for library functions"
+echo "======================================================="
+AC_FUNC_FORK
+AC_FUNC_MEMCMP
+AC_FUNC_SELECT_ARGTYPES
+AC_FUNC_STAT
+AC_CHECK_FUNCS([bzero])
+AC_CHECK_FUNCS([endgrent])
+AC_CHECK_FUNCS([endpwent])
+AC_CHECK_FUNCS([gettimeofday])
+AC_CHECK_FUNCS([memset])
+AC_CHECK_FUNCS([select])
+AC_CHECK_FUNCS([strdup])
+AC_CHECK_FUNCS([strerror])
+
+##############################################################
+# compilation options
+##############################################################
+
+# Enable syslog system
+AC_ARG_WITH(syslog, [  --with-syslog   Turn on Syslog support (default=yes)], with_syslog=$withval, with_syslog=yes)
+if test "x$with_syslog" != "xno"; then
+	if test $forcesyslogno = 0; then
+		AC_DEFINE(USE_SYSLOG, 1, [Whether we have SYSLOG])
+	fi
+fi
+
+# Generate files
+echo
+echo "======================================================="
+echo " = Generate files"
+echo "======================================================="
+AC_CONFIG_FILES(Makefile)
+AC_CONFIG_HEADER(config.h)
+AC_CONFIG_FILES(install.sh)
+
+AC_OUTPUT

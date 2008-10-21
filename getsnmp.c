@@ -1291,6 +1291,7 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 		}
 
 		else {
+			vp = pdu->variables;
 			ix = 1;
 			while(vp != NULL && ix != pdu->errindex){
 				vp = vp->next_variable;

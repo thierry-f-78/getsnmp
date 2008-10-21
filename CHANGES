@@ -1,0 +1,7 @@
+0.1b:    infos at getsnmp dot 1s dot fr
+         * init db files after chrooting
+         * implement basic -h option command line
+         * man writted
+
+0.0b:    infos at getsnmp dot 1s dot fr
+         initial release

@@ -84,6 +84,15 @@ void config_load(int argc, char *argv[]){
 		if(argv[i][0]=='-'){
 			switch(argv[i][1]){
 
+				case 'v':
+					printf("getsnmp %s\n", PACKAGE_VERSION);
+					exit(0);
+					break;
+				
+				case 'h':
+					usage();
+					break;
+
 				case 'f':
 					if(i+1 >= argc){
 						fprintf(stderr, "Option -f without argument\n");
@@ -124,20 +133,13 @@ void config_cmd(int argc, char *argv[]){
 					i++;
 					break;
 
-				case 'v':
-					printf("getsnmp %s\n", PACKAGE_VERSION);
-					exit(0);
-					break;
-				
 				case 'd':
 					config[CF_DAEMON].valeur.integer = TRUE;
 					break;
-	
-				case 'h':
+
 				default:
 					fprintf(stderr, "Wrong option: -%c\n", argv[i][1]);
 					usage();
-					exit(1);
 					break;
 			}
 		}

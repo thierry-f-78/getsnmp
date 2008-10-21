@@ -1,3 +1,14 @@
+0.4:     infos at getsnmp dot 1s dot fr
+         * OpenBSD port
+         * data files rotation
+         * can add a global data filename prefix
+         * limit number of oids requested in one paquet snmp
+         * Segfault when the conf is parsed if DNS resolution failed.
+         * use unsigned int in file values
+         * dont quit in error case
+         * generate warning when parse config file
+         * Doc
+
 0.3:     infos at getsnmp dot 1s dot fr
          * the snmp values can be stored in a log file
          * you can compile the project without rrdtool

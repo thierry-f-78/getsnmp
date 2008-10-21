@@ -23,6 +23,7 @@
 
 #define TRUE                1
 #define FALSE               0
+#define ERROR               -1
 #define CONFIGFILE_LEN      512
 
 enum {
@@ -35,6 +36,7 @@ enum {
 	CF_CHROOT,
 	CF_USESYSLOG,
 	CF_DIRDB,
+	CF_MAXOID,
 
 	// total number of arguments
 	NUM_PARAMS

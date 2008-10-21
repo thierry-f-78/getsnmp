@@ -31,7 +31,7 @@ void usage(){
 	"getsnmp\n"
 	"    [-D log_level] [-v][-h][-d][-f config_file]\n"
 	"\n"
-	"    -D log level required\n"
+	"    -D log level required (must from 0 to 7)\n"
 	"    -f config file fir this session\n"
 	"    -d run as daemon\n"
 	"    -h this help\n"
@@ -80,6 +80,10 @@ void config_load(int argc, char *argv[]){
 	config[CF_CHROOT].attrib = "chrootdir";
 	config[CF_CHROOT].valeur.string = NULL;
 
+	config[CF_MAXOID].type = 1;
+	config[CF_MAXOID].attrib = "max_oid_in_one_request";
+	config[CF_MAXOID].valeur.integer = 30;
+
 	for(i=1; i<argc; i++){
 		if(argv[i][0]=='-'){
 			switch(argv[i][1]){
@@ -122,8 +126,8 @@ void config_cmd(int argc, char *argv[]){
 						usage();
 					}
 					i++;
-					if(argv[i][0] < 48 || argv[i][0] > 55){
-						fprintf(stderr, "Wrong -D parameter\n");
+					if(argv[i][0] < '0' || argv[i][0] > '7'){
+						fprintf(stderr, "Wrong -D parameter (must be from 0 to 7)\n");
 						usage();
 					}
 					config[CF_LOGLEVEL].valeur.integer = argv[i][0] - 48;
@@ -200,9 +204,7 @@ int convert_boolean(char *buf){
 	if(strcmp("false", buf) == 0) return(FALSE);
 	if(strcmp("0",     buf) == 0) return(FALSE);
 
-	fprintf(stderr, "error in config file: boolean value expected [%s]\n",
-		buf);
-	exit(1);	 
+	return ERROR;
 }
 
 void to_lower(char *in){

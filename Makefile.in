@@ -27,10 +27,13 @@ LIBS = @LIBS@
 OBJ = getsnmp.o server.o log.o loadconfig.o
 CFLAGS = -Wall -g \
          -DPID_FILE=\"$(lock_dir)/getsnmp.pid\" \
-         -DCONFIG_FILE=\"$(sysconfdir)/getsnmp/getsnmp.conf\"
+         -DCONFIG_FILE=\"$(sysconfdir)/getsnmp/getsnmp.conf\" \
+         -I/usr/local/include -I/usr/include -I/usr/pkg/include \
+
+LDFLAGS = -L/usr/local/lib -L/lib -L/usr/lib -L/usr/pkg/lib
 
 getsnmp: $(OBJ)
-	$(CC) $(CFLAGS) $(LIBS) -o getsnmp $(OBJ)
+	$(CC) $(LDFLAGS) $(LIBS) -o getsnmp $(OBJ)
 
 clean:
 	rm -f *.o getsnmp

@@ -31,6 +31,10 @@ usesyslog false
 # use log file ?
 logfile @log_dir@/getsnmp.log
 
+# limit the number of oid requested in one request snmp
+# a big number of oid requested not contain in one udp paquet
+# the default is 30
+max_oid_in_one_request 30
 
 ###############################################
 # retrieve data section
@@ -56,7 +60,15 @@ global timeout 3
 global version v2c
 
 # default backend
-global backends rrd
+global backends rrd file
+
+# rotate file time ("no" for disabled)
+# default no
+global rotate 300
+
+# prefix data file
+# default ""
+global prefix myDataFile
 
 # structure:
 #
@@ -73,8 +85,8 @@ global backends rrd
 #    community public      community (default: "global community")
 #    backend_rrd           default rrd backend (default: "global backends")
 #    backend_file          default file backend (default: "global backends")
-#
-#
+#    rotate                set rotation system time ("no" for disabled) (default: "global rotate")
+#    prefix                set prefix for data file (default: "global prefix")
 #
 # the "get" keyword is used for declaring one snmp value:
 # ---------------
@@ -90,7 +102,8 @@ global backends rrd
 #    retry                          number of retry (default: inherited from the last set)
 #    backend_rrd                    default rrd backend (default: inherited from the last set)
 #    backend_file                   default file backend (default: inherited from the last set)
-#
+#    rotate                         set rotation system time ("no" for disabled) (default: inherited from the last set)
+#    prefix                         set prefix for data file (default: inherited from the last set)
 #
 #    ( * ) must informed
 

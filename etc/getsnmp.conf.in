@@ -55,6 +55,9 @@ global timeout 3
 # default v1
 global version v2c
 
+# default backend
+global backends rrd
+
 # structure:
 #
 #  the keyword "set" set a snmp host server:
@@ -68,6 +71,8 @@ global version v2c
 #    timeout               request timeout (default: "global timeout")
 #    retry                 number of retry (default: "global retry")
 #    community public      community (default: "global community")
+#    backend_rrd           default rrd backend (default: "global backends")
+#    backend_file          default file backend (default: "global backends")
 #
 #
 #
@@ -79,9 +84,12 @@ global version v2c
 #    * oid SNMPv2-MIB::sysDescr.0   the oid (must informed)
 #    inter                          interval among two snmp get (default: inherited from the last set)
 #    file                           the db rrdtool file (default: automaticaly generated)
+#    filename                       the snmp values file (default: automaticaly generated)
 #    type gauge                     type of rrdtool data (gauge, counter) (default: gauge)
 #    timeout                        request timeout (default: inherited from the last set)
 #    retry                          number of retry (default: inherited from the last set)
+#    backend_rrd                    default rrd backend (default: inherited from the last set)
+#    backend_file                   default file backend (default: inherited from the last set)
 #
 #
 #    ( * ) must informed

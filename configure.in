@@ -3,7 +3,7 @@
 # $Id: configure.ac 96 2006-05-09 20:32:19Z thierry $
 #
 
-AC_INIT(getsnmp, 0.2)
+AC_INIT(getsnmp, 0.3)
 AC_PREREQ(2.59)
 
 # default install path
@@ -26,14 +26,11 @@ AC_TYPE_UID_T
 AC_HEADER_TIME
 AC_STRUCT_TM
 AC_HEADER_STDC
-AC_CHECK_HEADERS(syslog.h, forcesyslogno=0, forcesyslogno=1)
 AC_CHECK_HEADERS(errno.h, , echo "didn't find errno.h"; exit 1)
 AC_CHECK_HEADERS(fcntl.h, , echo "didn't find fcntl.h"; exit 1)
 AC_CHECK_HEADERS(grp.h, , echo "didn't find grp.h"; exit 1)
 AC_CHECK_HEADERS(net-snmp/net-snmp-config.h, , echo "didn't find net-snmp/net-snmp-config.h"; exit 1)
-#AC_CHECK_HEADERS(net-snmp/net-snmp-includes.h, , echo "didn't find net-snmp/net-snmp-includes.h"; exit 1)
 AC_CHECK_HEADERS(pwd.h, , echo "didn't find pwd.h"; exit 1)
-AC_CHECK_HEADERS(rrd.h, , echo "didn't find rrd.h"; exit 1)
 AC_CHECK_HEADERS(signal.h, , echo "didn't find signal.h"; exit 1)
 AC_CHECK_HEADERS(stdarg.h, , echo "didn't find stdarg.h"; exit 1)
 AC_CHECK_HEADERS(stdio.h, , echo "didn't find stdio.h"; exit 1)
@@ -50,10 +47,7 @@ echo
 echo "======================================================="
 echo " = Check for libraries"
 echo "======================================================="
-# FIXME: Replace `main' with a function in `-lrrd':
-AC_CHECK_LIB([rrd], [main])
-# FIXME: Replace `main' with a function in `-lsnmp':
-AC_CHECK_LIB([snmp], [main])
+AC_CHECK_LIB([snmp], [snmp_errstring])
 
 # Checks for library functions.
 echo
@@ -78,11 +72,26 @@ AC_CHECK_FUNCS([strerror])
 ##############################################################
 
 # Enable syslog system
-AC_ARG_WITH(syslog, [  --with-syslog   Turn on Syslog support (default=yes)], with_syslog=$withval, with_syslog=yes)
+AC_ARG_WITH(syslog, [  --with-syslog           Turn on Syslog support (default=yes)], [ with_syslog=$withval ], [ with_syslog=yes ])
 if test "x$with_syslog" != "xno"; then
-	if test $forcesyslogno = 0; then
-		AC_DEFINE(USE_SYSLOG, 1, [Whether we have SYSLOG])
-	fi
+	echo
+	echo "======================================================="
+	echo " = Check syslog avalaibility"
+	echo "======================================================="
+	AC_CHECK_HEADERS(syslog.h, forcesyslogno=0, forcesyslogno=1)
+	AC_DEFINE(USE_SYSLOG, 1, [Whether we have SYSLOG])
+fi
+
+# Enable rrd system
+AC_ARG_WITH(rrd,    [  --with-rrd              Turn on RRD support (default=yes)], [ with_rrd=$withval ], [ with_rrd=yes ])
+if test "x$with_rrd" != "xno"; then
+	echo
+	echo "======================================================="
+	echo " = Check rrd avalaibility"
+	echo "======================================================="
+	AC_CHECK_HEADERS(rrd.h, , echo "didn't find rrd.h"; exit 1)
+	AC_CHECK_LIB([rrd], [rrd_update, rrd_clear_error, rrd_test_error, rrd_get_error], , echo "didn't find lib rrd"; exit 1)
+	AC_DEFINE(USE_RRD, 1, [Whether we have RRD])
 fi
 
 # Generate files

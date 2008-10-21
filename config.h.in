@@ -10,5 +10,8 @@
 // use syslog ?
 #undef USE_SYSLOG
 
+// use rrd
+#undef USE_RRD
+
 // debug
 #undef DEBUG_SCHEDULER

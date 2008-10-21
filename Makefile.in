@@ -27,7 +27,7 @@ LIBS = @LIBS@
 OBJ = getsnmp.o server.o log.o loadconfig.o
 CFLAGS = -Wall -g \
          -DPID_FILE=\"$(lock_dir)/getsnmp.pid\" \
-         -DCONFIG_FILE=\"$(sysconfdir)/getsnmp.conf\"
+         -DCONFIG_FILE=\"$(sysconfdir)/getsnmp/getsnmp.conf\"
 
 getsnmp: $(OBJ)
 	$(CC) $(CFLAGS) $(LIBS) -o getsnmp $(OBJ)

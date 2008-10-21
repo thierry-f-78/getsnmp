@@ -156,8 +156,6 @@ int parse_conf(char *conf_file, void *snmp_callback){
 	int *lock;
 	// valeur de retour
 	int return_val = 1;
-	// pour tester les fichiers
-	struct stat st;
 
 	file = fopen(conf_file, "r");
 	if(file == NULL){
@@ -757,42 +755,6 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			// fin
 			cur_oid->rrd_create[7] = NULL;
 
-			// si le fichier n'existe pas, on le cree
-			// le fichier
-			i = stat(cur_oid->dbbase, &st);
-			if(i == -1 && errno != ENOENT){
-				logmsg(LOG_ERR, 
-				       "stat %s: %s",
-				       cur_oid->dbbase, strerror(errno));
-				goto end_parse_error;
-			} 
-	
-			// le fichier n'existe pas, on le cree
-			else if(i == -1 && errno == ENOENT){
-				// initilise rrd
-				optind = 0;
-				opterr = 0;
-				rrd_clear_error();
-				logmsg(LOG_NOTICE, 
-				       "Create db files: "
-				       "%s %s %s %s %s %s %s",
-				       cur_oid->rrd_create[0],
-				       cur_oid->rrd_create[1],
-				       cur_oid->rrd_create[2],
-				       cur_oid->rrd_create[3],
-				       cur_oid->rrd_create[4],
-				       cur_oid->rrd_create[5],
-				       cur_oid->rrd_create[6]);
-	
-				i = rrd_create(7, cur_oid->rrd_create);
-				if (rrd_test_error() || (i != 0)) {
-					logmsg(LOG_ERR,
-					       "rrd_create %s: %s",
-					       cur_oid->dbbase, rrd_get_error());
-					goto end_parse_error;
-				}
-			}
-	
 			// initilise rrdtool for update base
 			cur_oid->rrd_update[0] = "rrdupdate";
 

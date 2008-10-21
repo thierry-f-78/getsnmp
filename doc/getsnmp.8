@@ -1,0 +1,126 @@
+.\"
+.\" Copyright (c) 2005-2010 Thierry FOURNIER
+.\" $Id: arpalert.8 434 2006-11-06 23:51:17Z thierry $
+.\"
+.TH GETSNMP 8 2007-02-06 "" "snmp collector"
+.SH NAME
+getsnmp \- SNMP collector
+.SH DESCRIPTION
+getsnmp is a scheduler for collect snmp values from any network equipment and store it into a rrdtool database.
+.SH COMMAND LINE
+.TP
+\fB\-h help\fR
+Comma separated network interfaces listen to.
+.TP
+\fB\-f config_file\fR
+Specify the config file.
+.TP
+\fB\-D\fR
+log level required
+.TP
+\fB\-d\fR
+run as daemon
+.TP
+\fB\-v\fR
+version
+
+.\"
+.\" CONFIG FILE
+.\"
+.SH CONFIGURATION FILE
+.TP
+\fBdirectorydb\fR <directory>
+    store rrdtool db files into this directory
+.TP
+\fBlockfile\fR <pidfile>
+    file used for store pid number and lock the process
+.TP
+\fBdaemon\fR (yes|no)
+    run in daemon mode (fork) ?
+.TP
+\fBumask\fR umask
+    mask creation file
+.TP
+\fBuser\fR user
+    user running application
+.TP
+\fBchrootdir\fR <path>
+    directory to chroot application
+.TP
+\fBloglevel\fR (0|1|2|3|4|5|6|7)
+    log with this level
+    0: emergency
+    1: alert
+    2: critical
+    3: error
+    4: warning
+    5: notice
+    6: info
+    7: debug
+.TP
+\fBusesyslog\fR (yes|no)
+    use syslog
+.TP
+\fBlogfile\fR <logfile>
+    log in this file
+.TP
+\fBglobal community\fR community
+    set the default community
+    the default unsetted is 'public'
+.TP
+\fBglobal inter\fR seconds
+    set the default interval among two snmp get
+    the default unsetted is '300'
+.TP
+\fBglobal retry\fR number
+    set the default number of retry
+    the default unsetted is '0'
+.TP
+\fBglobal timeout\fR seconds
+    set the default request timeout (in seconds)
+    the default unsetted is '3'
+.TP
+\fBglobal version\fR (v1|v2|v2c)
+    set the default snmp protocol version
+    the default value unsetted is 'v1'
+.TP
+\fBset\fR
+    the keyword "set" set a snmp host server:
+
+    example:
+    set version v2c ip 192.168.10.4 timeout 3 retry 2 community public
+
+    the option are:
+    * \fBip\fR       server ip (must informed)
+    \fBinter\fR      interval among two snmp get (default: "global inter")
+    \fBversion\fR    snmp protocol version (default: "global version")
+    \fBtimeout\fR    request timeout (default: "global timeout")
+    \fBretry\fR      number of retry (default: "global retry")
+    \fBcommunity\fR  community (default: "global community")
+    ( * ) must informed 
+.TP
+\fBget\fR
+    the "get" keyword is used for declaring one snmp value:
+
+    example:
+    get oid IF-MIB::ifInOctets.3 inter 5 file toto type gauge
+
+    the option are:
+    * \fBoid\fR      (SNMPv2-MIB::sysDescr.0) the oid (must informed)
+    \fBinter\fR      interval among two snmp get (default: inherited from the last set)
+    \fBfile\fR       the db rrdtool file (default: automaticaly generated)
+    \fBtype\fR       type of rrdtool data (gauge, counter) (default: gauge)
+    \fBtimeout\fR    request timeout (default: inherited from the last set)
+    \fBretry\fR      number of retry (default: inherited from the last set)
+    ( * ) must informed
+.\"
+.\" CONFIG FILE
+.\"
+.SH FILES
+\fBsbin/getsnmp\fR: binary file
+.br
+\fBetc/getsnmp/getsnmp.conf\fR: default config file
+.br
+\fBvar/run/getsnmp.pid\fR: pid file
+.br
+

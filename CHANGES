@@ -1,3 +1,6 @@
+0.5:     infos at getsnmp dot 1s dot fr
+         * prevent segfault in error log
+
 0.4:     infos at getsnmp dot 1s dot fr
          * OpenBSD port
          * data files rotation

@@ -52,7 +52,8 @@ void initlog(void){
 		syslog_opened = 1;
 	}
 	#endif
-	if(config[CF_LOGFILE].valeur.string != NULL){
+	if(config[CF_LOGFILE].valeur.string != NULL && 
+	   config[CF_LOGFILE].valeur.string[0] != 0){
 		lf = fopen(config[CF_LOGFILE].valeur.string, "a");
 		if(lf == NULL){
 			fprintf(stderr, "[%s %d] fopen[%d]: %s\n",
@@ -74,7 +75,9 @@ void logmsg(int priority, const char *fmt, ...){
 		priority > config[CF_LOGLEVEL].valeur.integer ||
 
 		(
-			config[CF_LOGFILE].valeur.string == NULL &&
+			( config[CF_LOGFILE].valeur.string == NULL || 
+			  config[CF_LOGFILE].valeur.string[0] == 0
+			)&&
 			config[CF_DAEMON].valeur.integer == TRUE
 			#ifdef USE_SYSLOG
 			&& config[CF_USESYSLOG].valeur.integer == FALSE
@@ -99,7 +102,8 @@ void logmsg(int priority, const char *fmt, ...){
 	#endif
 
 	if(file_opened == 1 &&
-	   config[CF_LOGFILE].valeur.string != NULL){
+	   config[CF_LOGFILE].valeur.string != NULL &&
+	   config[CF_LOGFILE].valeur.string[0] != 0){
 		fprintf(lf, "%s % 2d %02d:%02d:%02d " PACKAGE_NAME ": %s\n",
 		        mois[tm->tm_mon],
 		        tm->tm_mday,

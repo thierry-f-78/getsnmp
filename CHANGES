@@ -1,3 +1,6 @@
+0.2:     infos at getsnmp dot 1s dot fr
+         * error while reading config file
+
 0.1b:    infos at getsnmp dot 1s dot fr
          * init db files after chrooting
          * implement basic -h option command line

@@ -53,6 +53,8 @@ config_dir=`echo "${config_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
 leases_dir=`echo "${leases_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
 lock_dir=`echo "${lock_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
 log_dir=`echo "${log_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
+db_dir=`echo "${db_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
+pid_dir=`echo "${pid_dir}" | tr '/' '@' | sed -e 's/@/\\\\\\//g'`
 sed -e "
 	s/@db_dir@/${db_dir}/g;
 	s/@pid_dir@/${pid_dir}/g;
@@ -61,5 +63,5 @@ sed -e "
 	s/@config_dir@/${config_dir}/g;
 	s/@leases_dir@/${leases_dir}/g;
 	s/@lock_dir@/${lock_dir}/g;
-" < etc/gtsnmp.conf.in > ${CONF}
+" < etc/getsnmp.conf.in > ${CONF}
 

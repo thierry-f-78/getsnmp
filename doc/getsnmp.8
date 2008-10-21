@@ -84,6 +84,10 @@ version
     set the default snmp protocol version
     the default value unsetted is 'v1'
 .TP
+\fBbackends\fR (rrd|file)
+    set the default backends used for logging values. 
+    the default value is 'rrd'
+.TP
 \fBset\fR
     the keyword "set" set a snmp host server:
 
@@ -91,12 +95,14 @@ version
     set version v2c ip 192.168.10.4 timeout 3 retry 2 community public
 
     the option are:
-    * \fBip\fR       server ip (must informed)
-    \fBinter\fR      interval among two snmp get (default: "global inter")
-    \fBversion\fR    snmp protocol version (default: "global version")
-    \fBtimeout\fR    request timeout (default: "global timeout")
-    \fBretry\fR      number of retry (default: "global retry")
-    \fBcommunity\fR  community (default: "global community")
+    * \fBip\fR         server ip (must informed)
+    \fBinter\fR        interval among two snmp get (default: "global inter")
+    \fBversion\fR      snmp protocol version (default: "global version")
+    \fBtimeout\fR      request timeout (default: "global timeout")
+    \fBretry\fR        number of retry (default: "global retry")
+    \fBcommunity\fR    community (default: "global community")
+    \fBbackend_rrd\fR  use rrd backend backend (default: "global backend")
+    \fBbackend_file\fR use rrd backend backend (default: "global backend")
     ( * ) must informed 
 .TP
 \fBget\fR
@@ -106,12 +112,15 @@ version
     get oid IF-MIB::ifInOctets.3 inter 5 file toto type gauge
 
     the option are:
-    * \fBoid\fR      (SNMPv2-MIB::sysDescr.0) the oid (must informed)
-    \fBinter\fR      interval among two snmp get (default: inherited from the last set)
-    \fBfile\fR       the db rrdtool file (default: automaticaly generated)
-    \fBtype\fR       type of rrdtool data (gauge, counter) (default: gauge)
-    \fBtimeout\fR    request timeout (default: inherited from the last set)
-    \fBretry\fR      number of retry (default: inherited from the last set)
+    * \fBoid\fR        (SNMPv2-MIB::sysDescr.0) the oid (must informed)
+    \fBinter\fR        interval among two snmp get (default: inherited from the last set)
+    \fBbackend_rrd\fR  use rrd backend backend (default: inherited from the last set)
+    \fBbackend_file\fR use rrd backend backend (default: inherited from the last set)
+    \fBfile\fR         the db rrdtool file (default: automaticaly generated)
+    \fBfilename\fR     the values file (default: automaticaly generated)
+    \fBtype\fR         type of rrdtool data (gauge, counter) (default: gauge)
+    \fBtimeout\fR      request timeout (default: inherited from the last set)
+    \fBretry\fR        number of retry (default: inherited from the last set)
     ( * ) must informed
 .\"
 .\" CONFIG FILE

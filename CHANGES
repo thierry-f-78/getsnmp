@@ -1,3 +1,8 @@
+0.3:     infos at getsnmp dot 1s dot fr
+         * the snmp values can be stored in a log file
+         * you can compile the project without rrdtool
+         * bug in install script
+
 0.2:     infos at getsnmp dot 1s dot fr
          * error while reading config file
 

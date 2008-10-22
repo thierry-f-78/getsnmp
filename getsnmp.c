@@ -16,6 +16,7 @@
 #ifdef USE_RRD
 #include <rrd.h>
 #endif
+#include <sys/param.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -138,6 +139,8 @@ int parse_conf(char *conf_file, void *snmp_callback){
 	int i, nul, j;
 	// used for error storage
 	char *error;
+	// pour bricoler
+	char buff[MAXPATHLEN+1];
 	// base de configuration globale
 	struct {
 		int inter;
@@ -307,6 +310,21 @@ int parse_conf(char *conf_file, void *snmp_callback){
 				goto end_parse_error;
 			}
 
+			// ajoute un repertoire dans lequel rechercher des mibs
+			else if(strcmp("mib_directory", args[1])==0){
+				if(arg < 3){
+					logmsg(LOG_ERR, 
+					       "file %s, line %d: global mib_directory: "
+					       "value not found",
+					       config_file, ligne);
+					goto end_parse_error;
+				}
+				snprintf(buff, MAXPATHLEN+1, "+%s", args[2]);
+				netsnmp_set_mib_directory(buff);
+				shutdown_mib();
+				init_mib();
+			}
+			
 			// recupere la community par defaut pour toutes les instances
 			else if(strcmp("community", args[1])==0){
 				if(arg < 3){
@@ -660,6 +678,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 		// get router oid SNMPv2-MIB::sysDescr.0 inter
 		//  5 file router.sysDescr.db
 		else if(strcmp("get", args[0]) == 0){
+
 			// controle d'integrité - valeurs par defaut
 			if(cur_base.ip == NULL){
 				logmsg(LOG_ERR, 
@@ -686,6 +705,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			cur_snmp.lock = lock;
 			cur_snmp.timeout = cur_base.timeout;
 			cur_snmp.actif = 0;
+			cur_snmp.first_oid = NULL;
 			// default value for inter
 			cur_snmp.inter = cur_base.inter;
 			// default value for inter
@@ -1442,6 +1462,7 @@ int main (int argc, char **argv){
 	// recupere la date
 	gettimeofday(&current_t, NULL);
 
+	// init snmp system
 	init_snmp("snmp");
 
 	// default config file

@@ -1,3 +1,8 @@
+0.8:     infos at getsnmp dot 1s dot fr
+         * can add specific mib directorys
+         * log in all cases
+         * minor bug: segfault in some cases when loading configuration
+
 0.7:     infos at getsnmp dot 1s dot fr
          * permit rotation when the filename is in the get section
 

@@ -40,7 +40,7 @@ clean:
 
 mrproper: clean
 	rm -rf autom4te.cache config.h Makefile install.sh
-	rm -rf configure config.status config.log
+	rm -rf config.status config.log
 
 install:
 	/bin/sh -x install.sh

@@ -60,14 +60,15 @@ void initlog(void){
 			        __FILE__, __LINE__, errno, strerror(errno));
 			exit(1);
 		}
+		file_opened = 1;
 	}
-	file_opened = 1;
 }
 
 void logmsg(int priority, const char *fmt, ...){
 	va_list ap;
 	char msg[4096];
 	struct tm *tm;
+	int do_log = 0;
 
 	// return if do not log in file or on standard output
 	if(
@@ -98,6 +99,7 @@ void logmsg(int priority, const char *fmt, ...){
 	if(syslog_opened == 1 &&
 	   config[CF_USESYSLOG].valeur.integer == TRUE){
 		syslog(priority, msg); 
+		do_log = 1;
 	}
 	#endif
 
@@ -113,9 +115,10 @@ void logmsg(int priority, const char *fmt, ...){
 		        //for year: tm->tm_year+1900,
 		        msg);
 		fflush(lf);
+		do_log = 1;
 	}
 
-	if(config[CF_DAEMON].valeur.integer == FALSE){
+	if(config[CF_DAEMON].valeur.integer == FALSE || do_log == 0){
 		printf("%s % 2d %02d:%02d:%02d " PACKAGE_NAME ": %s\n", 
 		        mois[tm->tm_mon],
 		        tm->tm_mday,

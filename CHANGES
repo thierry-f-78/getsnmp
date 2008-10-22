@@ -1,3 +1,6 @@
+0.7:     infos at getsnmp dot 1s dot fr
+         * permit rotation when the filename is in the get section
+
 0.6:     infos at getsnmp dot 1s dot fr
          * extend configuration file possibilities for making
            this more simply

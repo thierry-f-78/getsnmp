@@ -430,7 +430,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						cur_global.backends |= GETSNMP_RRD;
 						#ifndef USE_RRD
 						logmsg(LOG_ERR,
-						       "file %s, line %d: the option \"backend rrd\" dont take effect",
+						       "file %s, line %d: the option \"backend rrd\" dont take effect (RRD unavailable)",
 						       config_file, ligne);
 						#endif
 					}
@@ -532,7 +532,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 					#ifndef USE_RRD
 					logmsg(LOG_ERR,
-					       "file %s, line %d: the option \"backend_rrd\" dont take effect",
+					       "file %s, line %d: the option \"backend_rrd\" dont take effect (RRD unavailable)",
 					       config_file, ligne);
 					#endif
 					cur_base.backends |= GETSNMP_RRD;
@@ -724,7 +724,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 					#ifndef USE_RRD
 					logmsg(LOG_ERR,
-					       "file %s, line %d: the option \"backend_rrd\" dont take effect",
+					       "file %s, line %d: the option \"backend_rrd\" dont take effect (RRD unavailable)",
 					       config_file, ligne);
 					#endif
 					cur_oid.backends |= GETSNMP_RRD;
@@ -866,7 +866,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 					#ifndef USE_RRD
 					logmsg(LOG_ERR,
-					       "file %s, line %d: the option \"type %s\" dont take effect",
+					       "file %s, line %d: the option \"type %s\" dont take effect (RRD unavailable)",
 					       config_file, ligne, args[i+1]);
 					#endif
 					i += 2;
@@ -1030,7 +1030,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 				} else {
 					if(tmp_oid->rotate != FALSE){
-						snprintf(buf, MAX_LEN, "%s_%s.\1YYYYmmddHHMMSS.log",
+						snprintf(buf, MAX_LEN, "%s_%s.\1YYYmmddHHMMSS.log",
 						         snmpget->sess->peername, tmp_oid->oidname);
 					} else {
 						snprintf(buf, MAX_LEN, "%s_%s.log",
@@ -1045,6 +1045,19 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					parse++;
 				}
 				tmp_oid->filename = strdup(buf);
+			} 
+			// si le nom de fichier est precisé, mais qu'on veut rotater
+			else if (tmp_oid->rotate != FALSE) {
+				snprintf(buf, MAX_LEN, "%s_\1YYYmmddHHMMSS.log", tmp_oid->filename);
+				free (tmp_oid->filename);
+				tmp_oid->filename = strdup(buf);
+			}
+
+			// ajoute le suffixe adequat si il doit y avoir de la rotation
+			else if (tmp_oid->rotate != FALSE) {
+				snprintf(buf, MAX_LEN, "%s.\1YYYmmddHHMMSS.log", tmp_oid->filename);
+				free(tmp_oid->filename);
+				tmp_oid->filename = strdup(buf);
 			}
 
 			// set default dataname
@@ -1056,6 +1069,8 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			         config[CF_DIRDB].valeur.string, tmp_oid->filename);
 			free(tmp_oid->filename);
 			tmp_oid->filename = strdup(buf);
+
+			// 
 			if(tmp_oid->rotate != FALSE){
 				j = 0;
 				while(tmp_oid->filename[j] != '\1'){

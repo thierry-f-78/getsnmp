@@ -118,7 +118,70 @@ static char * rrd_type_absolute = "ABSOLUTE";
 static char * rrd_rra_type_average = "AVERAGE";
 static char * rrd_rra_type_max = "MAX";
 
+#define DUMP_CONFIG_BLEN 1024
 void dump_config(void) {
+	struct snmp_get *run;
+	struct oid_list *roid;
+	char buffer[DUMP_CONFIG_BLEN];
+	char *tmp;
+	int count = 0;
+	int id;
+	int i;
+
+	// run all scheduled processes
+	for (run = sched;
+	     run != NULL;
+	     run = run->next) {
+		printf("[-] RETRIEVE BLOC %d\n", count);
+		printf(" |- INTERVAL    : %d\n", run->inter);
+		printf(" |- TIMEOUT     : %d\n", run->timeout);
+		printf(" |- RETRIES     : %d\n", run->sess->retries);
+		switch(run->sess->version) {
+			case SNMP_VERSION_1:  tmp = "v1";      break;
+			case SNMP_VERSION_2u: tmp = "v2";      break;
+			case SNMP_VERSION_2c: tmp = "v2c";     break;
+			case SNMP_VERSION_3:  tmp = "v3";      break;
+			default:              tmp = "unknown"; break;
+		}
+		printf(" |- VERSION     : %s (%ld)\n", tmp, run->sess->version);
+		printf(" |- CLIENT      : \"%s\"\n", run->sess->peername);
+		printf(" |- PORT        : %d\n", run->sess->remote_port);
+		strncpy(buffer, (char *)run->sess->community, run->sess->community_len);
+		buffer[run->sess->community_len] = 0;
+		printf(" |- COMMUNITY   : \"%s\"\n", buffer);
+		printf(" +- OID LIST : %d\n", run->count_oids);
+
+		id = 0;
+		for (roid = run->first_oid;
+		     roid != NULL;
+		     roid = roid->next) {
+			printf("   |- OID %d\n", id);
+			printf("   |  |- NAME     : \"%s\"\n", roid->oidname);
+			printf("   |  |- OID      : ");
+			for (i=0; i<roid->oidlen; i++)
+				printf(".%ld", roid->oid[i]);
+			id++;
+			printf("\n");
+			if (roid->rotate==1)
+				tmp = "yes";
+			else
+				tmp = "no";
+			printf("   |  |- ROTATE   : %s\n", tmp);
+			if (roid->prefix == NULL)
+				tmp = "<INFORMATION MISSED>";
+			else
+				tmp = roid->prefix;
+			printf("   |  |- PREFIX   : \"%s\"\n", roid->prefix);
+			printf("   |  |- FILENAME : \"%s\"\n", roid->filename);
+			printf("   |  |- DATANAME : \"%s\"\n", roid->dataname);
+			printf("   |  +- RRDTYPE  : \"%s\"\n", roid->rrd_type);
+			printf("   |\n");
+		}
+
+		printf("\n");
+		count++;
+	}
+
 	exit(0);
 }
 

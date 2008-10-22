@@ -166,21 +166,24 @@ void dump_config(void) {
 
 			printf("   %s- OID %d\n", c, id);
 			printf("   %s  |- NAME     : \"%s\"\n", b, roid->oidname);
-			printf("   %s  |- OID      : ", b);
-			for (i=0; i<roid->oidlen; i++)
-				printf(".%ld", roid->oid[i]);
+			printf("   %s  |- OID      : [", b);
+			for (i=0; i<roid->oidlen; i++) {
+				if (i>0)
+					printf(".");
+				printf("%ld", roid->oid[i]);
+			}
 			id++;
-			printf("\n");
+			printf("]\n");
 			if (roid->rotate==1)
 				tmp = "yes";
 			else
 				tmp = "no";
-			printf("   %s  |- ROTATE   : %s\n", b, tmp);
+			printf("   %s  |- ROTATE   : %d (%s)\n", b, roid->rotate, tmp);
 			if (roid->prefix == NULL)
-				tmp = "<INFORMATION MISSED>";
+				tmp = "";
 			else
 				tmp = roid->prefix;
-			printf("   %s  |- PREFIX   : \"%s\"\n", b, roid->prefix);
+			printf("   %s  |- PREFIX   : \"%s\"\n", b, tmp);
 			printf("   %s  |- FILENAME : \"%s\"\n", b, roid->filename);
 			printf("   %s  |- DATANAME : \"%s\"\n", b, roid->dataname);
 			printf("   %s  +- RRDTYPE  : \"%s\"\n", b, roid->rrd_type);

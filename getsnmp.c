@@ -1627,6 +1627,11 @@ int main (int argc, char **argv){
 			timeout.tv_sec = 0;
 		}
 
+		if(timeout.tv_usec > 999999) {
+			timeout.tv_sec += timeout.tv_usec / 1000000;
+			timeout.tv_usec %= 1000000;
+		}
+
 		#ifdef DEBUG_SCHEDULER
 		logmsg(LOG_DEBUG,
 		       "select retournera dans: %d.%d",

@@ -1029,6 +1029,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 					// copie des valeurs
 					memcpy(snmpget, &cur_snmp, sizeof(struct snmp_get));
+					snmpget->count_oids = 0;
 	
 					// chainage
 					snmpget->next = sched;

@@ -123,7 +123,7 @@ void dump_config(void) {
 	struct snmp_get *run;
 	struct oid_list *roid;
 	char buffer[DUMP_CONFIG_BLEN];
-	char *tmp;
+	char *tmp, *c, *b;
 	int count = 0;
 	int id;
 	int i;
@@ -155,9 +155,18 @@ void dump_config(void) {
 		for (roid = run->first_oid;
 		     roid != NULL;
 		     roid = roid->next) {
-			printf("   |- OID %d\n", id);
-			printf("   |  |- NAME     : \"%s\"\n", roid->oidname);
-			printf("   |  |- OID      : ");
+
+			if (id + 1 == run->count_oids) {
+				c = "+";
+				b = " ";
+			} else {
+				c = "|";
+				b = "|";
+			}
+
+			printf("   %s- OID %d\n", c, id);
+			printf("   %s  |- NAME     : \"%s\"\n", b, roid->oidname);
+			printf("   %s  |- OID      : ", b);
 			for (i=0; i<roid->oidlen; i++)
 				printf(".%ld", roid->oid[i]);
 			id++;
@@ -166,16 +175,16 @@ void dump_config(void) {
 				tmp = "yes";
 			else
 				tmp = "no";
-			printf("   |  |- ROTATE   : %s\n", tmp);
+			printf("   %s  |- ROTATE   : %s\n", b, tmp);
 			if (roid->prefix == NULL)
 				tmp = "<INFORMATION MISSED>";
 			else
 				tmp = roid->prefix;
-			printf("   |  |- PREFIX   : \"%s\"\n", roid->prefix);
-			printf("   |  |- FILENAME : \"%s\"\n", roid->filename);
-			printf("   |  |- DATANAME : \"%s\"\n", roid->dataname);
-			printf("   |  +- RRDTYPE  : \"%s\"\n", roid->rrd_type);
-			printf("   |\n");
+			printf("   %s  |- PREFIX   : \"%s\"\n", b, roid->prefix);
+			printf("   %s  |- FILENAME : \"%s\"\n", b, roid->filename);
+			printf("   %s  |- DATANAME : \"%s\"\n", b, roid->dataname);
+			printf("   %s  +- RRDTYPE  : \"%s\"\n", b, roid->rrd_type);
+			printf("   %s\n", b);
 		}
 
 		printf("\n");

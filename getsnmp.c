@@ -174,6 +174,17 @@ void dump_config(void) {
 			}
 			id++;
 			printf("]\n");
+
+			printf("   %s  |- BACKENDS : [", b);
+			if((roid->backends & GETSNMP_FILE) != 0)
+				printf("FILE");
+			if((roid->backends & GETSNMP_FILE) != 0 &&
+			   (roid->backends & GETSNMP_RRD) != 0)
+				printf(",");
+			if((roid->backends & GETSNMP_RRD) != 0)
+				printf("RRDTOOL");
+			printf("]\n");
+
 			if (roid->rotate==1)
 				tmp = "yes";
 			else

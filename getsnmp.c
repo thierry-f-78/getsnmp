@@ -102,6 +102,9 @@ struct snmp_get *sched = NULL;
 // pointe sur les erreurs
 extern int errno;
 
+// displaying configuration
+extern int display_conf;
+
 // nombre maximun d'arguments sur une ligne
 #define MAX_ARGS 50
 // taille du buffer de lecture ligne à ligne
@@ -114,6 +117,96 @@ static char * rrd_type_derive = "DERIVE";
 static char * rrd_type_absolute = "ABSOLUTE";
 static char * rrd_rra_type_average = "AVERAGE";
 static char * rrd_rra_type_max = "MAX";
+
+#define DUMP_CONFIG_BLEN 1024
+void dump_config(void) {
+	struct snmp_get *run;
+	struct oid_list *roid;
+	char buffer[DUMP_CONFIG_BLEN];
+	char *tmp, *c, *b;
+	int count = 0;
+	int id;
+	int i;
+
+	// run all scheduled processes
+	for (run = sched;
+	     run != NULL;
+	     run = run->next) {
+		printf("[-] RETRIEVE BLOC %d\n", count);
+		printf(" |- INTERVAL    : %d\n", run->inter);
+		printf(" |- TIMEOUT     : %d\n", run->timeout);
+		printf(" |- RETRIES     : %d\n", run->sess->retries);
+		switch(run->sess->version) {
+			case SNMP_VERSION_1:  tmp = "v1";      break;
+			case SNMP_VERSION_2u: tmp = "v2";      break;
+			case SNMP_VERSION_2c: tmp = "v2c";     break;
+			case SNMP_VERSION_3:  tmp = "v3";      break;
+			default:              tmp = "unknown"; break;
+		}
+		printf(" |- VERSION     : %s (%ld)\n", tmp, run->sess->version);
+		printf(" |- CLIENT      : \"%s\"\n", run->sess->peername);
+		printf(" |- PORT        : %d\n", run->sess->remote_port);
+		strncpy(buffer, (char *)run->sess->community, run->sess->community_len);
+		buffer[run->sess->community_len] = 0;
+		printf(" |- COMMUNITY   : \"%s\"\n", buffer);
+		printf(" +- OID LIST : %d\n", run->count_oids);
+
+		id = 0;
+		for (roid = run->first_oid;
+		     roid != NULL;
+		     roid = roid->next) {
+
+			if (id + 1 == run->count_oids) {
+				c = "+";
+				b = " ";
+			} else {
+				c = "|";
+				b = "|";
+			}
+
+			printf("   %s- OID %d\n", c, id);
+			printf("   %s  |- NAME     : \"%s\"\n", b, roid->oidname);
+			printf("   %s  |- OID      : [", b);
+			for (i=0; i<roid->oidlen; i++) {
+				if (i>0)
+					printf(".");
+				printf("%ld", roid->oid[i]);
+			}
+			id++;
+			printf("]\n");
+
+			printf("   %s  |- BACKENDS : [", b);
+			if((roid->backends & GETSNMP_FILE) != 0)
+				printf("FILE");
+			if((roid->backends & GETSNMP_FILE) != 0 &&
+			   (roid->backends & GETSNMP_RRD) != 0)
+				printf(",");
+			if((roid->backends & GETSNMP_RRD) != 0)
+				printf("RRDTOOL");
+			printf("]\n");
+
+			if (roid->rotate==1)
+				tmp = "yes";
+			else
+				tmp = "no";
+			printf("   %s  |- ROTATE   : %d (%s)\n", b, roid->rotate, tmp);
+			if (roid->prefix == NULL)
+				tmp = "";
+			else
+				tmp = roid->prefix;
+			printf("   %s  |- PREFIX   : \"%s\"\n", b, tmp);
+			printf("   %s  |- FILENAME : \"%s\"\n", b, roid->filename);
+			printf("   %s  |- DATANAME : \"%s\"\n", b, roid->dataname);
+			printf("   %s  +- RRDTYPE  : \"%s\"\n", b, roid->rrd_type);
+			printf("   %s\n", b);
+		}
+
+		printf("\n");
+		count++;
+	}
+
+	exit(0);
+}
 
 /* Parse le fichier de conf
  *
@@ -959,6 +1052,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					}
 					// copie des valeurs
 					memcpy(snmpget, &cur_snmp, sizeof(struct snmp_get));
+					snmpget->count_oids = 0;
 	
 					// chainage
 					snmpget->next = sched;
@@ -1481,6 +1575,10 @@ int main (int argc, char **argv){
 	// parse command line
 	config_cmd(argc, argv);
 
+	// dump configuration if needed
+	if (display_conf == 1)
+		dump_config();
+
 	// initilization of log system
 	initlog();
 
@@ -1625,6 +1723,11 @@ int main (int argc, char **argv){
 		if(timeout.tv_sec < 0 || timeout.tv_usec < 0){
 			timeout.tv_usec = 0;
 			timeout.tv_sec = 0;
+		}
+
+		if(timeout.tv_usec > 999999) {
+			timeout.tv_sec += timeout.tv_usec / 1000000;
+			timeout.tv_usec %= 1000000;
 		}
 
 		#ifdef DEBUG_SCHEDULER

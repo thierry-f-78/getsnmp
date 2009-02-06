@@ -29,7 +29,7 @@ BUILDVER := $(shell ref=$$((git describe --tags) 2>/dev/null) && ref=$${ref%-g*}
 
 CC = @CC@
 LIBS = @LIBS@
-OBJ = getsnmp.o server.o log.o loadconfig.o expand.o
+OBJ = getsnmp.o server.o log.o loadconfig.o loadfile.o expand.o
 CFLAGS = -Wall -g \
          -DPID_FILE=\"$(lock_dir)/getsnmp.pid\" \
          -DCONFIG_FILE=\"$(sysconfdir)/getsnmp/getsnmp.conf\" \

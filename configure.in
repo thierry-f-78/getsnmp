@@ -3,7 +3,7 @@
 # $Id: configure.ac 96 2006-05-09 20:32:19Z thierry $
 #
 
-AC_INIT(getsnmp, 0.9)
+AC_INIT(getsnmp, 0.10)
 AC_PREREQ(2.59)
 
 # default install path

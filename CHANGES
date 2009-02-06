@@ -1,3 +1,6 @@
+0.10     * can display expanded conf ( -s )
+         * BUGFIX: memory crush
+
 0.9:     Lucian Craciun
          * FreeBSD bug in the sheduler.
 

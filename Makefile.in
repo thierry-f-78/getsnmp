@@ -3,6 +3,8 @@
 # $Id: Makefile.in 303 2006-10-16 09:21:24Z thierry $
 # 
 
+PRJNAME = getsnmp
+
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 bindir = @bindir@
@@ -21,6 +23,9 @@ leases_dir = @localstatedir@/lib/getsnmp
 lock_dir = @localstatedir@/run
 log_dir = @localstatedir@/log
 src_dir = .
+
+# get build version from the git tree in the form "lasttag-changes", and use "dev" if unknown
+BUILDVER := $(shell ref=$$((git describe --tags) 2>/dev/null) && ref=$${ref%-g*} && echo "$${ref\#v}")
 
 CC = @CC@
 LIBS = @LIBS@
@@ -44,3 +49,12 @@ mrproper: clean
 
 install:
 	/bin/sh -x install.sh
+
+pack:
+	autoconf
+	rm -rf /tmp/$(PRJNAME)-$(BUILDVER) >/dev/null 2>&1; \
+	git clone . /tmp/$(PRJNAME)-$(BUILDVER) && \
+	cp configure /tmp/$(PRJNAME)-$(BUILDVER) && \
+	tar --exclude .git -C /tmp/ -vzcf $(PRJNAME)-$(BUILDVER).tar.gz $(PRJNAME)-$(BUILDVER) && \
+	rm -rf /tmp/$(PRJNAME)-$(BUILDVER) >/dev/null 2>&1; \
+

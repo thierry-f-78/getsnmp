@@ -980,12 +980,6 @@ int parse_conf(char *conf_file, void *snmp_callback){
 				}
 				tmp_oid->filename = strdup(buf);
 			} 
-			// si le nom de fichier est precisé, mais qu'on veut rotater
-			else if (tmp_oid->rotate != FALSE) {
-				snprintf(buf, MAX_LEN, "%s_\1YYYmmddHHMMSS.log", tmp_oid->filename);
-				free (tmp_oid->filename);
-				tmp_oid->filename = strdup(buf);
-			}
 
 			// ajoute le suffixe adequat si il doit y avoir de la rotation
 			else if (tmp_oid->rotate != FALSE) {

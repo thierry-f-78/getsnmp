@@ -1076,10 +1076,10 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			tmp_oid->rrd_create[3] = strdup(buf);
 
 			/* automatic choose average method */ 
-			if(tmp_oid->rrd_type == rrd_type_gauge)
-				parse = rrd_rra_type_max;
+			if(tmp_oid->rrd_type == RRD_TYPE_GAUGE)
+				parse = RRD_RRA_TYPE_MAX;
 			else
-				parse = rrd_rra_type_average;
+				parse = RRD_RRA_TYPE_AVERAGE;
 
 
 

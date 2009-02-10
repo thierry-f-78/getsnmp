@@ -935,59 +935,59 @@ int parse_conf(char *conf_file, void *snmp_callback){
 		tmp_oid = snmpget->first_oid;
 		while(tmp_oid != NULL){
 
-			// gere le fichier de file par defaut;
-			if(tmp_oid->filename == NULL){
-				if(tmp_oid->prefix != NULL){
-					if(tmp_oid->rotate != FALSE){
-						snprintf(buf, MAX_LEN, "%s_%s_%s.\1YYYmmddHHMMSS.log",
-						         tmp_oid->prefix, snmpget->sess->peername, tmp_oid->oidname);
-					} else {
-						snprintf(buf, MAX_LEN, "%s_%s_%s.log",
-						         tmp_oid->prefix, snmpget->sess->peername, tmp_oid->oidname);
-					}
-				} else {
-					if(tmp_oid->rotate != FALSE){
-						snprintf(buf, MAX_LEN, "%s_%s.\1YYYmmddHHMMSS.log",
-						         snmpget->sess->peername, tmp_oid->oidname);
-					} else {
-						snprintf(buf, MAX_LEN, "%s_%s.log",
-						         snmpget->sess->peername, tmp_oid->oidname);
-					}
-				}
-				parse = buf;
-				while(*parse != 0){
-					if(*parse == ':'){
-						*parse='_';
-					}
-					parse++;
-				}
-				tmp_oid->filename = strdup(buf);
-			} 
 
-			// ajoute le suffixe adequat si il doit y avoir de la rotation
-			else if (tmp_oid->rotate != FALSE) {
-				snprintf(buf, MAX_LEN, "%s.\1YYYmmddHHMMSS.log", tmp_oid->filename);
+
+			/* build datafile name if needed */
+			if ((tmp_oid->backends & GETSNMP_FILE) != 0) {
+
+				/* if filename is not declared, build default datafile name */
+				if(tmp_oid->filename == NULL){
+
+					/* the default name is peername_oidname */
+					snprintf(buf, MAX_LEN, "%s_%s.log",
+					         snmpget->sess->peername, tmp_oid->oidname);
+
+					/*	remove oid ambiguous character (: and /) */
+					parse = buf;
+					while (*parse != 0) {
+						if (*parse == ':' || *parse == '/')
+							*parse='_';
+						parse++;
+					}
+					tmp_oid->filename = strdup(buf);
+				} 
+	
+				/* set default dataname */
+				if (tmp_oid->dataname == NULL)
+					tmp_oid->dataname = strdup(tmp_oid->oidname);
+	
+				/* if rotation required, suffix filename with the rotation tag */
+				if (tmp_oid->rotate != FALSE) {
+					snprintf(buf, MAX_LEN, "%s.\1YYYmmddHHMMSS.log", tmp_oid->filename);
+					free(tmp_oid->filename);
+					tmp_oid->filename = strdup(buf);
+				}
+
+				/* prefix filename with prefix if needed */
+				if (tmp_oid->prefix != NULL) {
+					snprintf(buf, MAX_LEN, "%s_%s",
+					         tmp_oid->prefix, tmp_oid->filename);
+					free(tmp_oid->filename);
+					tmp_oid->filename = strdup(buf);
+				}
+
+				/* prefix filename with data path */
+				snprintf(buf, MAX_LEN, "%s/%s",
+				         config[CF_DIRDB].valeur.string, tmp_oid->filename);
 				free(tmp_oid->filename);
 				tmp_oid->filename = strdup(buf);
-			}
-
-			// set default dataname
-			if (tmp_oid->dataname == NULL)
-				tmp_oid->dataname = tmp_oid->filename;
-
-			// set data path
-			snprintf(buf, MAX_LEN, "%s/%s",
-			         config[CF_DIRDB].valeur.string, tmp_oid->filename);
-			free(tmp_oid->filename);
-			tmp_oid->filename = strdup(buf);
-
-			// 
-			if(tmp_oid->rotate != FALSE){
-				j = 0;
-				while(tmp_oid->filename[j] != '\1'){
-					j++;
+	
+				/* if rotation required, search and store the first character
+				 * of rotation pattern */
+				if (tmp_oid->rotate != FALSE) {
+					for (j=0; tmp_oid->filename[j] != '\1'; j++);
+					tmp_oid->date_ptr = &tmp_oid->filename[j];
 				}
-				tmp_oid->date_ptr = &tmp_oid->filename[j];
 			}
 
 

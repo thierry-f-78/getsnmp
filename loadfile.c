@@ -933,25 +933,6 @@ int parse_conf(char *conf_file, void *snmp_callback){
 		tmp_oid = snmpget->first_oid;
 		while(tmp_oid != NULL){
 
-			// gere le fichier de db par defaut;
-			if(tmp_oid->dbbase == NULL){
-				snprintf(buf, MAX_LEN, "%s_%s.db",
-				         snmpget->sess->peername, tmp_oid->oidname);
-				parse = buf;
-				while(*parse != 0){
-					if(*parse == ':'){
-						*parse='_';
-					}
-					parse++;
-				}
-				tmp_oid->dbbase = strdup(buf);
-			}
-
-			snprintf(buf, MAX_LEN, "%s/%s",
-			         config[CF_DIRDB].valeur.string, tmp_oid->dbbase);
-			free(tmp_oid->dbbase);
-			tmp_oid->dbbase = strdup(buf);
-
 			// gere le fichier de file par defaut;
 			if(tmp_oid->filename == NULL){
 				if(tmp_oid->prefix != NULL){
@@ -1007,59 +988,107 @@ int parse_conf(char *conf_file, void *snmp_callback){
 				tmp_oid->date_ptr = &tmp_oid->filename[j];
 			}
 
-			// initialise rrdtool for create base
+
+#ifdef USE_RRD
+
+
+			/* build defaultrrd tool database name */
+			if(tmp_oid->dbbase == NULL){
+				snprintf(buf, MAX_LEN, "%s_%s.db",
+				         snmpget->sess->peername, tmp_oid->oidname);
+				parse = buf;
+				while(*parse != 0){
+					if(*parse == ':'){
+						*parse='_';
+					}
+					parse++;
+				}
+				tmp_oid->dbbase = strdup(buf);
+			}
+
+			snprintf(buf, MAX_LEN, "%s/%s",
+			         config[CF_DIRDB].valeur.string, tmp_oid->dbbase);
+			free(tmp_oid->dbbase);
+			tmp_oid->dbbase = strdup(buf);
+
+			/* build rrdtool commands for database initilizing */
+
+			/* commans create */
 			tmp_oid->rrd_create[0] = "rrdcreate";
 
-			// le fichier
+			/* the database file */
 			tmp_oid->rrd_create[1] = tmp_oid->dbbase;
 
-			// donne l'espacement entre chaque donnée entrée
+			/* data step */
 			snprintf(buf, MAX_LEN, "-s %d", snmpget->inter);
 			tmp_oid->rrd_create[2] = strdup(buf);
 
-			// initilize la source de données
+			/* init DS: DataSource */
 			snprintf(buf, MAX_LEN, "DS:value:%s:%d:U:U",
 			         tmp_oid->rrd_type, snmpget->inter * 2);
 			tmp_oid->rrd_create[3] = strdup(buf);
 
-			// choix de la technique de moyennage
+			/* automatic choose average method */ 
 			if(tmp_oid->rrd_type == rrd_type_gauge)
 				parse = rrd_rra_type_max;
 			else
 				parse = rrd_rra_type_average;
 
-			// calcule de la moyenne pour 2 jours
-			// 2 jours * 24 heures * 60 minutes * 60 secondes /
-			// moyenne de 1 top de "cur_snmp->inter" chacun = 2 jours
+
+
+			/* init RRA: Roud Robin Archives */
+
+			/* 2 days average:
+			 * use 1 primary data point (DS) for 1 RRA consolidated data point
+			 * use 
+			 *   ( 2 days * 24 hour * 60 minuts * 60 seconds ) /
+			 *   ( 1 * "cur_snmp->inter" )
+			 */
 			snprintf(buf, MAX_LEN, "RRA:%s:0.5:1:%d",
 			         parse, ( 2 * 24 * 60 * 60 ) / ( 1 * snmpget->inter ));
 			tmp_oid->rrd_create[4] = strdup(buf);
 
-			// calcule de la moyenne pour 2 semaines
-			// 14 jours * 24 heures * 60 minutes * 60 secondes /
-			// moyenne de 6 top de "cur_snmp->inter" chacun = 14 jours
+			/* 2 weeks average:
+			 * use 6 primary data point (DS) for 1 RRA consolidated data point
+			 * use
+			 *   ( 14 days * 24 hours * 60 minuts * 60 seconds ) /
+			 *   ( 6 * "cur_snmp->inter" )
+			 */
 			snprintf(buf, MAX_LEN, "RRA:%s:0.5:6:%d",
 			         parse, ( 14 * 24 * 60 * 60 ) / ( 6 * snmpget->inter ));
 			tmp_oid->rrd_create[5] = strdup(buf);
 
-			// calcul de la moyenne pour 2 mois
-			// 62 jours * 24 heures * 60 minutes * 60 secondes /
-			// moyenne de 24 top de "cur_snmp->inter" chacun = 62 jours
+			/* 2months average:
+			 * use 24 primary data point (DS) for 1 RRA consolidated data point
+			 *   ( 62 days * 24 hours * 60 minuts * 60 seconds ) /
+			 *   ( 24 * "cur_snmp->inter" )
+			 */
 			snprintf(buf, MAX_LEN, "RRA:%s:0.5:24:%d",
 			         parse, ( 62 * 24 * 60 * 60 ) / ( 24 * snmpget->inter));
 			tmp_oid->rrd_create[6] = strdup(buf);
 		
-			// fin
+			/* mark end */
 			tmp_oid->rrd_create[7] = NULL;
 
-			// initilise rrdtool for update base
+
+
+			/* initialize rrdtool command for update data */
+
+			/* initilise rrdtool for update base */
 			tmp_oid->rrd_update[0] = "rrdupdate";
 
-			// le fichier
+			/* data file */
 			tmp_oid->rrd_update[1] = tmp_oid->dbbase;
 
+			/* ptr for data */
 			tmp_oid->rrd_update[2] = NULL;
+
+			/* mark end */
 			tmp_oid->rrd_update[3] = NULL;
+
+
+#endif /* USE_RRD */
+
 
 			tmp_oid = tmp_oid->next;
 		}

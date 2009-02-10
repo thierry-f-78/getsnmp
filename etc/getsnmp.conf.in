@@ -67,8 +67,12 @@ global backends rrd file
 global rotate 300
 
 # prefix data file
-# default ""
+# no default
 global prefix myDataFile
+
+# set default data file 
+# no default 
+global filename myDataFileName
 
 # structure:
 #
@@ -87,6 +91,7 @@ global prefix myDataFile
 #    backend_file          default file backend (default: "global backends")
 #    rotate                set rotation system time ("no" for disabled) (default: "global rotate")
 #    prefix                set prefix for data file (default: "global prefix")
+#    filename              the snmp values file (default: "global filename")
 #
 # the "get" keyword is used for declaring one snmp value:
 # ---------------
@@ -96,7 +101,8 @@ global prefix myDataFile
 #    * oid SNMPv2-MIB::sysDescr.0   the oid (must informed)
 #    inter                          interval between two snmp get (default: inherited from the last set)
 #    file                           the db rrdtool file (default: automaticaly generated)
-#    filename                       the snmp values file (default: automaticaly generated)
+#    filename                       the snmp values file (default: inherited from the last set 
+#                                                     if no filename inherited, is automaticaly generated)
 #    type gauge                     type of rrdtool data (gauge, counter) (default: gauge)
 #    timeout                        request timeout (default: inherited from the last set)
 #    retry                          number of retry (default: inherited from the last set)

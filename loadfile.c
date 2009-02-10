@@ -66,6 +66,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 		unsigned int backends;
 		int rotate;
 		char *prefix;
+		char *filename;
 	} cur_global = {
 		.inter = 300,
 		.community = def_community,
@@ -74,7 +75,8 @@ int parse_conf(char *conf_file, void *snmp_callback){
 		.version = SNMP_VERSION_1,
 		.backends = GETSNMP_RRD | GETSNMP_DEFAULT,
 		.rotate = 0,
-		.prefix = NULL
+		.prefix = NULL,
+		.filename = NULL
 	};
 	// base de configuration par machine
 	struct {
@@ -87,11 +89,13 @@ int parse_conf(char *conf_file, void *snmp_callback){
 		unsigned int backends;
 		int rotate;
 		char *prefix;
+		char *filename;
 	} cur_base = {
 		.ip = NULL,
 		.community = NULL,
 		.rotate = 0,
-		.prefix = NULL
+		.prefix = NULL,
+		.filename = NULL
 	};
 	// config d'une recuperation snmp
 	struct snmp_get cur_snmp;
@@ -225,6 +229,18 @@ int parse_conf(char *conf_file, void *snmp_callback){
 				goto end_parse_error;
 			}
 
+			/* get global data filename */
+			else if(strcmp("filename", args[1])==0){
+				if(arg < 3){
+					logmsg(LOG_ERR, 
+					       "file %s, line %d: global filename: "
+					       "value not found",
+					       config_file, ligne);
+					goto end_parse_error;
+				}
+				cur_global.filename = strdup(args[2]);
+			}
+			
 			// ajoute un repertoire dans lequel rechercher des mibs
 			else if(strcmp("mib_directory", args[1])==0){
 				if(arg < 3){
@@ -430,6 +446,12 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			cur_base.prefix = cur_global.prefix;
 			cur_base.rotate = cur_global.rotate;
 
+			/* inherit global filename */
+			if (cur_global.filename != NULL)
+				cur_base.filename = strdup(cur_global.filename);
+			else
+				cur_base.filename = NULL;
+
 			i = 1;
 			while(i < arg){
 				// recupere la version du proto souhaitée
@@ -497,6 +519,21 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						goto end_parse_error;
 						*/
 					}
+					i += 2;
+				}
+
+				/* host data filename */
+				else if(strcmp("filename", args[i])==0){
+					if(arg <= i + 1) {
+						logmsg(LOG_ERR, 
+						       "file %s, line %d: filename: value not found",
+						       config_file, ligne);
+						goto end_parse_error;
+					}
+					if ( cur_base.filename != NULL) {
+						free(cur_base.filename);
+					}
+					cur_base.filename = strdup(args[i+1]);
 					i += 2;
 				}
 
@@ -629,7 +666,13 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			cur_oid.backends = cur_base.backends | GETSNMP_DEFAULT;
 			// initialise le fichier
 			cur_oid.dbbase = NULL;
-			cur_oid.filename = NULL;
+
+			/* inherit host filename */
+			if (cur_base.filename != NULL)
+				cur_oid.filename = strdup(cur_base.filename);
+			else
+				cur_oid.filename = NULL;
+
 			cur_oid.dataname = NULL;
 			if(cur_base.prefix != NULL) {
 				cur_oid.prefix = strdup(cur_base.prefix);
@@ -760,6 +803,8 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						       config_file, ligne);
 						goto end_parse_error;
 					}
+					if (cur_oid.filename != NULL)
+						free(cur_oid.filename);
 					cur_oid.filename = strdup(args[i+1]);
 					i += 2;
 				}
@@ -1113,7 +1158,15 @@ int parse_conf(char *conf_file, void *snmp_callback){
 	if(cur_base.community != NULL) {
 		free(cur_base.community);
 		cur_base.community = NULL;
-	}	
+	}
+	if (cur_base.filename != NULL) {
+		free(cur_base.filename);
+		cur_base.filename = NULL;
+	}
+	if (cur_global.filename != NULL) {
+		free(cur_global.filename);
+		cur_global.filename = NULL;
+	}
 	if(cur_global.community != def_community) free(cur_global.community);
 
 	fclose(file);

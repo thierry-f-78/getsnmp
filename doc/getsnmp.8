@@ -89,7 +89,10 @@ version
     the default value is 'rrd'
 .TP
 \fBglobal prefix\fR string
-    prefix data file default ""
+    prefix data file. no default value
+.TP
+\fBglobal filename\fR string
+    set default data file. no default value
 .TP
 \fBset\fR
     the keyword "set" set a snmp host server:
@@ -107,6 +110,8 @@ version
     \fBbackend_rrd\fR  use rrd backend backend (default: "global backend")
     \fBbackend_file\fR use rrd backend backend (default: "global backend")
     \fBprefix\fR       set prefix for data file (default: "global prefix")
+    \fBfilename\fR     the snmp values file (default: "global filename")
+	 
     ( * ) must informed 
 .TP
 \fBget\fR
@@ -124,7 +129,8 @@ version
     \fBbackend_rrd\fR  use rrd backend backend (default: inherited from the last set)
     \fBbackend_file\fR use rrd backend backend (default: inherited from the last set)
     \fBfile\fR         the db rrdtool file (default: automaticaly generated from OID)
-    \fBfilename\fR     the values file (default: automaticaly generated from OID)
+    \fBfilename\fR     the values file (default: inherited from the last set. if no
+    filename inherited, is automaticaly generated from OID)
     \fBdataname\fR     the name of the data getted (default: automaticaly generated from OID)
     \fBtype\fR         type of rrdtool data (gauge, counter) (default: gauge)
     \fBtimeout\fR      request timeout (default: inherited from the last set)

@@ -23,12 +23,12 @@
 static char def_community[] = "public";
 
 /* rrd arguments and methods */
-static char rrd_type_gauge[] = "GAUGE";
-static char rrd_type_counter[] = "COUNTER";
-static char rrd_type_derive[] = "DERIVE";
-static char rrd_type_absolute[] = "ABSOLUTE";
-static char rrd_rra_type_average[] = "AVERAGE";
-static char rrd_rra_type_max[] = "MAX";
+#define RRD_TYPE_GAUGE       "GAUGE"
+#define RRD_TYPE_COUNTER     "COUNTER"
+#define RRD_TYPE_DERIVE      "DERIVE"
+#define RRD_TYPE_ABSOLUTE    "ABSOLUTE"
+#define RRD_RRA_TYPE_AVERAGE "AVERAGE"
+#define RRD_RRA_TYPE_MAX     "MAX"
 
 /* Parse le fichier de conf
  *
@@ -624,7 +624,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 			// default value for inter
 			cur_snmp.inter = cur_base.inter;
 			// default value for inter
-			cur_oid.rrd_type = rrd_type_gauge;
+			cur_oid.rrd_type = RRD_TYPE_GAUGE;
 			// flags backend
 			cur_oid.backends = cur_base.backends | GETSNMP_DEFAULT;
 			// initialise le fichier
@@ -785,13 +785,13 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						goto end_parse_error;
 					}
 					if(strcmp("gauge", args[i+1]) == 0)
-						cur_oid.rrd_type = rrd_type_gauge;
+						cur_oid.rrd_type = RRD_TYPE_GAUGE;
 					else if(strcmp("counter", args[i+1]) == 0)
-						cur_oid.rrd_type = rrd_type_counter;
+						cur_oid.rrd_type = RRD_TYPE_COUNTER;
 					else if(strcmp("derive", args[i+1]) == 0)
-						cur_oid.rrd_type = rrd_type_derive;
+						cur_oid.rrd_type = RRD_TYPE_DERIVE;
 					else if(strcmp("absolute", args[i+1]) == 0)
-						cur_oid.rrd_type = rrd_type_absolute;
+						cur_oid.rrd_type = RRD_TYPE_ABSOLUTE;
 					else {
 						logmsg(LOG_ERR, 
 						       "file %s, line %d: "

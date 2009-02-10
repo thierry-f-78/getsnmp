@@ -142,13 +142,6 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 					rrd_clear_error();
 					cur_oid->rrd_update[2] = buf;
 
-					#ifdef DEBUG_SCHEDULER
-					logmsg(LOG_DEBUG,
-					       "store value for %s at %d.%d",
-					       host->sess->peername,
-					       current_t.tv_sec, current_t.tv_usec);
-					#endif
-
 					ix = rrd_update(3, cur_oid->rrd_update);
 					if (rrd_test_error() || (ix != 0)) {
 						logmsg(LOG_ERR,
@@ -358,10 +351,6 @@ int main (int argc, char **argv){
 		// calcule le timeout et les actions
 		timeout.tv_sec = 999999999;
 
-		#ifdef DEBUG_SCHEDULER
-		i=0;
-		#endif
-
 		cur_snmp = sched;
 		while(cur_snmp != NULL){
 			// si un lock est posé, on ne traite pas le process
@@ -369,15 +358,6 @@ int main (int argc, char **argv){
 
 				// si l'heure actuelle est plus grande que l'heure de reveil
 				// on balance la requete
-
-				#ifdef DEBUG_SCHEDULER
-				logmsg(LOG_DEBUG,
-				       "0x%08x: time_comp(temps_courant, date_de_get) "
-				       "= %d (-1: a < b, 1: a > b)",
-				       &cur_snmp,
-				       time_comp(&current_t, &cur_snmp->activ_date));
-				#endif
-
 				if(time_comp(&current_t, &cur_snmp->activ_date)==1){
 					// gen the get
 					req = snmp_pdu_create(SNMP_MSG_GET);
@@ -386,12 +366,6 @@ int main (int argc, char **argv){
 						snmp_add_null_var(req, cur_oid->oid, cur_oid->oidlen);
 						cur_oid = cur_oid->next;
 					}
-
-					#ifdef DEBUG_SCHEDULER
-					logmsg(LOG_DEBUG,
-					       "SEND request to: %s",
-					       cur_snmp->sess->peername);
-					#endif
 
 					// send the get
 					if(!snmp_send(cur_snmp->sess, req)){
@@ -417,33 +391,10 @@ int main (int argc, char **argv){
 					ecart.tv_sec -= 1;
 				}
 
-				#ifdef DEBUG_SCHEDULER
-				logmsg(LOG_DEBUG,
-				       "process=%i: (date_de_get) %d.%d - "
-				       "(date_courante)%d.%d = "
-				       "(timeout)%d.%d", 
-				       i, cur_snmp->activ_date.tv_sec,
-				       cur_snmp->activ_date.tv_usec,
-				       current_t.tv_sec, current_t.tv_usec,
-				       ecart.tv_sec, ecart.tv_usec);
-				i++;
-				logmsg(LOG_DEBUG,
-				       "comparaison (timeout calcule)%d.%d "
-				       "<=> (plus petit timeout)%d.%d",
-				       ecart.tv_sec, ecart.tv_usec,
-				       timeout.tv_sec, timeout.tv_usec);
-				#endif
-
 				if(time_comp(&ecart, &timeout)==-1){
 					timeout.tv_sec = ecart.tv_sec;
 					timeout.tv_usec = ecart.tv_usec;
 				}
-
-				#ifdef DEBUG_SCHEDULER
-				logmsg(LOG_DEBUG,
-				       "plus petit timeout = %d.%d",
-				       timeout.tv_sec, timeout.tv_usec);
-				#endif
 
 			} // fin du controle de verouillage
 
@@ -481,20 +432,7 @@ int main (int argc, char **argv){
 			timeout.tv_usec %= 1000000;
 		}
 
-		#ifdef DEBUG_SCHEDULER
-		logmsg(LOG_DEBUG,
-		       "select retournera dans: %d.%d",
-		       timeout.tv_sec, timeout.tv_usec);
-		#endif
-
 		fds = select(fds, &fdset, NULL, NULL, &timeout);
-
-		#ifdef DEBUG_SCHEDULER
-		logmsg(LOG_DEBUG,
-		       ">>>>>>>>>>>>>> "
-		       "select return %d (<0: erreur, =0: timeout, >0: fd) "
-		       "<<<<<<<<<<<<", fds);
-		#endif
 
 		if (fds < 0) {
 			logmsg(LOG_ERR, "select: %s", strerror(errno));

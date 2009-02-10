@@ -56,8 +56,9 @@ void initlog(void){
 	   config[CF_LOGFILE].valeur.string[0] != 0){
 		lf = fopen(config[CF_LOGFILE].valeur.string, "a");
 		if(lf == NULL){
-			fprintf(stderr, "[%s %d] fopen[%d]: %s\n",
-			        __FILE__, __LINE__, errno, strerror(errno));
+			fprintf(stderr, "[%s %d] fopen(%s)[%d]: %s\n",
+			        __FILE__, __LINE__, config[CF_LOGFILE].valeur.string,
+			        errno, strerror(errno));
 			exit(1);
 		}
 		file_opened = 1;

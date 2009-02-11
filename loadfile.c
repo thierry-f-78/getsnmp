@@ -1011,6 +1011,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 				if (tmp_oid->rotate != 0) {
 					for (j=0; tmp_oid->filename[j] != '\1'; j++);
 					tmp_oid->date_ptr = &tmp_oid->filename[j];
+					tmp_oid->filename[j] = 'Y';
 				}
 			}
 

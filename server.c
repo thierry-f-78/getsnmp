@@ -20,8 +20,6 @@
 #include "loadconfig.h"
 #include "log.h"
 
-extern int errno;
-
 void daemonize(void){
 	int pid;
 	int descriptor;

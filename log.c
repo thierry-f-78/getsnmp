@@ -24,8 +24,6 @@
 #include "log.h"
 #include "loadconfig.h"
 
-extern int errno;
-
 int syslog_opened = 0;
 int file_opened = 0;
 

@@ -33,9 +33,6 @@
 // pointeur sur la premiere structure
 struct snmp_get *sched = NULL;
 
-// pointe sur les erreurs
-extern int errno;
-
 /* gere les reponses SNMP
  */
 int asynch_response(int operation, struct snmp_session *sp, int reqid,

@@ -367,6 +367,8 @@ int main (int argc, char **argv){
 			if (*cur_snmp->lock == 1)
 				continue;
 
+
+
 			/* if the current time is older than get activation date
 			   run new job */
 			if (time_comp(&current_t, &cur_snmp->activ_date) == 1) {
@@ -392,27 +394,36 @@ int main (int argc, char **argv){
 				cur_snmp->actif = 1;
 			}
 
-			/* compute remaining sleep time for this task */
-			ecart.tv_usec = cur_snmp->activ_date.tv_usec - current_t.tv_usec;
-			ecart.tv_sec  = cur_snmp->activ_date.tv_sec  - current_t.tv_sec;
-			if (ecart.tv_usec < 0) {
-				ecart.tv_usec += 1000000;
-				ecart.tv_sec -= 1;
-			}
 
-			/* if this timeout is little than current timeout, 
-			   add it into timeout system */
-			if (timeout == NULL) {
-				timeout = &_timeout;
-				timeout->tv_sec  = ecart.tv_sec;
-				timeout->tv_usec = ecart.tv_usec;
-			}
-			else if (time_comp(&ecart, timeout) == -1){
-				timeout->tv_sec = ecart.tv_sec;
-				timeout->tv_usec = ecart.tv_usec;
-			}
 
+			/* else compute timeout */
+			else {
+
+				/* compute remaining sleep time for this task */
+				ecart.tv_usec = cur_snmp->activ_date.tv_usec - current_t.tv_usec;
+				ecart.tv_sec  = cur_snmp->activ_date.tv_sec  - current_t.tv_sec;
+				if (ecart.tv_usec < 0) {
+					ecart.tv_usec += 1000000;
+					ecart.tv_sec -= 1;
+				}
+	
+				/* if this timeout is little than current timeout, 
+				   add it into timeout system */
+				if (timeout == NULL) {
+					timeout = &_timeout;
+					timeout->tv_sec  = ecart.tv_sec;
+					timeout->tv_usec = ecart.tv_usec;
+				}
+				else if (time_comp(&ecart, timeout) == -1){
+					timeout->tv_sec = ecart.tv_sec;
+					timeout->tv_usec = ecart.tv_usec;
+				}
+			}
 		}
+
+
+
+		/* build lib snmp requirements */
 
 		/* reset bitfield */
 		FD_ZERO(&fdset);
@@ -437,6 +448,8 @@ int main (int argc, char **argv){
 			}
 		}
 
+
+
 		/* timeout sanity check */
 		if (timeout != NULL) {
 
@@ -456,6 +469,8 @@ int main (int argc, char **argv){
 				timeout->tv_usec %= 1000000;
 			}
 		}
+
+
 
 		/* wait for next action */
 		fds = select(fds, &fdset, NULL, NULL, timeout);

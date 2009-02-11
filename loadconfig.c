@@ -29,7 +29,7 @@ int convert_boolean(char*);
 void usage(){
 	printf(
 	"\n"
-	"getsnmp\n"
+	"getsnmp " BUILDVER "\n"
 	"    [-D log_level] [-v][-h][-d][-f config_file]\n"
 	"\n"
 	"    -D log level required (must from 0 to 7)\n"
@@ -91,7 +91,7 @@ void config_load(int argc, char *argv[]){
 			switch(argv[i][1]){
 
 				case 'v':
-					printf("getsnmp %s\n", PACKAGE_VERSION);
+					printf("getsnmp %s\n", BUILDVER);
 					exit(0);
 					break;
 				

@@ -31,6 +31,7 @@ CC = @CC@
 LIBS = @LIBS@
 OBJ = getsnmp.o server.o log.o loadconfig.o loadfile.o expand.o
 CFLAGS = -Wall -g \
+         -DBUILDVER=\"$(BUILDVER)\" \
          -DPID_FILE=\"$(lock_dir)/getsnmp.pid\" \
          -DCONFIG_FILE=\"$(sysconfdir)/getsnmp/getsnmp.conf\" \
          -I/usr/local/include -I/usr/include -I/usr/pkg/include \

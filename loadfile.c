@@ -1151,13 +1151,17 @@ int parse_conf(char *conf_file, void *snmp_callback){
 
 	fclose(file);
 
-	// initilise le timer (prochaine requete)
+	/* initialize date of first request */
 	gettimeofday(&current_t, NULL);
 	snmpget = sched;
 	while(snmpget != NULL){
 		snmpget->activ_date.tv_sec = current_t.tv_sec + 1;
 		snmpget->activ_date.tv_usec = current_t.tv_usec +
 		         ( ( random() % FREQ ) * (1000000 / FREQ));
+		if (snmpget->activ_date.tv_usec > 1000000) {
+			snmpget->activ_date.tv_sec += snmpget->activ_date.tv_usec / 1000000;
+			snmpget->activ_date.tv_usec %= 1000000;
+		}
 		snmpget = snmpget->next;
 	}
 	return(return_val);

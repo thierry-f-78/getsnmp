@@ -24,8 +24,7 @@ lock_dir = @localstatedir@/run
 log_dir = @localstatedir@/log
 src_dir = .
 
-# get build version from the git tree in the form "lasttag-changes", and use "dev" if unknown
-BUILDVER := $(shell ref=$$((git describe --tags) 2>/dev/null) && ref=$${ref%-g*} && echo "$${ref\#v}")
+BUILDVER := $(shell cat VERSION)
 
 CC = @CC@
 LIBS = @LIBS@
@@ -59,3 +58,7 @@ pack:
 	tar --exclude .git -C /tmp/ -vzcf $(PRJNAME)-$(BUILDVER).tar.gz $(PRJNAME)-$(BUILDVER) && \
 	rm -rf /tmp/$(PRJNAME)-$(BUILDVER) >/dev/null 2>&1; \
 
+version:
+	ref=$$((git describe --tags) 2>/dev/null); \
+	ref=$${ref%-g*}; \
+	echo "$${ref#v}" > VERSION

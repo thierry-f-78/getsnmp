@@ -62,8 +62,8 @@ global version v2c
 # default backend
 global backends rrd file
 
-# rotate file time ("no" for disabled)
-# default no
+# rotate file time (0 for disabled)
+# default 0
 global rotate 300
 
 # prefix data file
@@ -89,7 +89,7 @@ global filename myDataFileName
 #    community public      community (default: "global community")
 #    backend_rrd           default rrd backend (default: "global backends")
 #    backend_file          default file backend (default: "global backends")
-#    rotate                set rotation system time ("no" for disabled) (default: "global rotate")
+#    rotate                set rotation system time (0 for disabled) (default: "global rotate")
 #    prefix                set prefix for data file (default: "global prefix")
 #    filename              the snmp values file (default: "global filename")
 #
@@ -108,7 +108,7 @@ global filename myDataFileName
 #    retry                          number of retry (default: inherited from the last set)
 #    backend_rrd                    default rrd backend (default: inherited from the last set)
 #    backend_file                   default file backend (default: inherited from the last set)
-#    rotate                         set rotation system time ("no" for disabled) (default: inherited from the last set)
+#    rotate                         set rotation system time (0 for disabled) (default: inherited from the last set)
 #    prefix                         set prefix for data file (default: inherited from the last set)
 #
 #    ( * ) mandatory

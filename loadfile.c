@@ -290,16 +290,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					       config_file, ligne);
 					goto end_parse_error;
 				}
-				cur_global.rotate = convert_boolean(args[2]);
-				if ( cur_global.rotate == ERROR ) {
-					cur_global.rotate = convert_int(args[2]);
-					/*
-					logmsg(LOG_ERR, 
-					       "file %s, line %d: global rotate: invalid value (%s)",
-					       config_file, ligne, args[2]);
-					goto end_parse_error;
-					*/
-				}
+				cur_global.rotate = convert_int(args[2]);
 			}
 
 			// set global prefix
@@ -509,16 +500,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						       config_file, ligne);
 						goto end_parse_error;
 					}
-					cur_base.rotate = convert_boolean(args[i+1]);
-					if(cur_base.rotate == ERROR) {
-						cur_global.rotate = convert_int(args[2]);
-						/*
-						logmsg(LOG_ERR, 
-						       "file %s, line %d: rotate: invalid value (%s)",
-						       config_file, ligne, args[i+1]);
-						goto end_parse_error;
-						*/
-					}
+					cur_global.rotate = convert_int(args[2]);
 					i += 2;
 				}
 
@@ -724,10 +706,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 						       config_file, ligne);
 						goto end_parse_error;
 					}
-					cur_oid.rotate = convert_boolean(args[i+1]);
-					if(cur_oid.rotate == ERROR) {
-						cur_global.rotate = convert_int(args[2]);
-					}
+					cur_global.rotate = convert_int(args[2]);
 					i += 2;
 				}
 
@@ -1007,7 +986,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 					tmp_oid->dataname = strdup(tmp_oid->oidname);
 	
 				/* if rotation required, suffix filename with the rotation tag */
-				if (tmp_oid->rotate != FALSE) {
+				if (tmp_oid->rotate != 0) {
 					snprintf(buf, MAX_LEN, "%s.\1YYYmmddHHMMSS.log", tmp_oid->filename);
 					free(tmp_oid->filename);
 					tmp_oid->filename = strdup(buf);
@@ -1029,7 +1008,7 @@ int parse_conf(char *conf_file, void *snmp_callback){
 	
 				/* if rotation required, search and store the first character
 				 * of rotation pattern */
-				if (tmp_oid->rotate != FALSE) {
+				if (tmp_oid->rotate != 0) {
 					for (j=0; tmp_oid->filename[j] != '\1'; j++);
 					tmp_oid->date_ptr = &tmp_oid->filename[j];
 				}
@@ -1250,11 +1229,11 @@ void dump_config(void) {
 				printf("RRDTOOL");
 			printf("]\n");
 
-			if (roid->rotate==1)
-				tmp = "yes";
+			if (roid->rotate == 0)
+				tmp = "(dont rotate)";
 			else
-				tmp = "no";
-			printf("   %s  |- ROTATE   : %d (%s)\n", b, roid->rotate, tmp);
+				tmp = "";
+			printf("   %s  |- ROTATE   : %d %s\n", b, roid->rotate, tmp);
 			if (roid->prefix == NULL)
 				tmp = "";
 			else

@@ -110,7 +110,7 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 					}
 
 					/* get value */
-					value = *vp->val.integer;
+					value = (unsigned int)*vp->val.integer;
 					break;
 
 				/* general 64 bit value */
@@ -125,9 +125,9 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 					}
 
 					/* get value */
-					value   = vp->val.counter64->high;
+					value   = (unsigned int)vp->val.counter64->high;
 					value <<= 32;
-					value  |= vp->val.counter64->low;
+					value  |= (unsigned int)vp->val.counter64->low;
 					break;
 
 				/* default: unknown|unsupported value */
@@ -146,7 +146,7 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 				if((cur_oid->backends & GETSNMP_RRD) != 0){
 
 					/* build rrdtool data */
-					snprintf(buf, sizeof(buf), "N:%lld", value);
+					snprintf(buf, sizeof(buf), "N:%llu", value);
 					cur_oid->rrd_update[2] = buf;
 
 					/* update rrd database */
@@ -220,7 +220,7 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 					}
 
 					/* write value */
-					fprintf(fd, "%u %s %lld\n", 
+					fprintf(fd, "%u %s %llu\n", 
 					        (unsigned int)current_t.tv_sec,
 					        cur_oid->dataname, value);
 

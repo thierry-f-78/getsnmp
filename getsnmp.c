@@ -291,11 +291,13 @@ int main (int argc, char **argv){
 	int block = 1;
 	fd_set fdset;
 	int flag_tmout_snmp;
-	struct timeval timeout;
+	struct timeval *timeout;
+	struct timeval _timeout;
 	struct timeval ecart;
 	struct snmp_pdu *req;
 	struct oid_list *cur_oid;
 	int i;
+	int loop_error = 0;
 	
 	// recupere la date
 	gettimeofday(&current_t, NULL);
@@ -332,112 +334,155 @@ int main (int argc, char **argv){
 	// quit privileges and chroot
 	separe();
 
-	fds = 0;
-	
-	// on schedule
-	while(1){
-		// recupere la date
+	/* main loop */
+	while (1) {
+
+		/* get current date */
 		gettimeofday(&current_t, NULL);
 
-		// si une socket en attente de snmp a braillée ...
-		if(fds){
+
+
+		/* snmp action */
+
+		/* if the number of file descriptor is > 0, a network action is avalaible */
+		if (fds > 0)
 			snmp_read(&fdset);
-		}
 
-		else if(flag_tmout_snmp==1){
+		/* if fds is 0, then select return timeout
+		   if flag_tmout_snmp is set, the timeout is required by snmp */
+		else if (fds == 0 && flag_tmout_snmp == 1)
 			snmp_timeout();
+
+
+
+		/* prepare next scheduling round */
+
+		/* check all snmp scheduled task  and build next timeout */
+		timeout = NULL;
+		flag_tmout_snmp = 0;
+		for (cur_snmp = sched;
+		     cur_snmp != NULL;
+			  cur_snmp = cur_snmp->next) {
+
+			/* if host group lock is set, goto next host.
+			   the lock would say that the host is currently under snmp request
+			   the snmp request timeout are managed by the libsnmp */
+			if (*cur_snmp->lock == 1)
+				continue;
+
+			/* if the current time is older than get activation date
+			   run new job */
+			if (time_comp(&current_t, &cur_snmp->activ_date) == 1) {
+
+				/* generate snmp request */
+				req = snmp_pdu_create(SNMP_MSG_GET);
+				for (cur_oid = cur_snmp->first_oid;
+				     cur_oid != NULL;
+					  cur_oid = cur_oid->next)
+					snmp_add_null_var(req, cur_oid->oid, cur_oid->oidlen);
+
+				/* register snmp request, and send it,
+				   this is not very asynchronous */
+				if (snmp_send(cur_snmp->sess, req) == 0) {
+					logmsg(LOG_ERR, "snmp_send: %s", snmp_api_errstring(snmp_errno));
+					snmp_free_pdu(req);
+				}
+
+				/* lock host process */
+				*cur_snmp->lock = 1;
+
+				/* set current snmp retrieve active */
+				cur_snmp->actif = 1;
+			}
+
+			/* compute remaining sleep time for this task */
+			ecart.tv_usec = cur_snmp->activ_date.tv_usec - current_t.tv_usec;
+			ecart.tv_sec  = cur_snmp->activ_date.tv_sec  - current_t.tv_sec;
+			if (ecart.tv_usec < 0) {
+				ecart.tv_usec += 1000000;
+				ecart.tv_sec -= 1;
+			}
+
+			/* if this timeout is little than current timeout, 
+			   add it into timeout system */
+			if (timeout == NULL) {
+				timeout = &_timeout;
+				timeout->tv_sec  = ecart.tv_sec;
+				timeout->tv_usec = ecart.tv_usec;
+			}
+			else if (time_comp(&ecart, timeout) == -1){
+				timeout->tv_sec = ecart.tv_sec;
+				timeout->tv_usec = ecart.tv_usec;
+			}
+
 		}
 
-		// calcule le timeout et les actions
-		timeout.tv_sec = 999999999;
-
-		cur_snmp = sched;
-		while(cur_snmp != NULL){
-			// si un lock est posé, on ne traite pas le process
-			if(*cur_snmp->lock == 0) {
-
-				// si l'heure actuelle est plus grande que l'heure de reveil
-				// on balance la requete
-				if(time_comp(&current_t, &cur_snmp->activ_date)==1){
-					// gen the get
-					req = snmp_pdu_create(SNMP_MSG_GET);
-					cur_oid = cur_snmp->first_oid;
-					while(cur_oid != NULL){
-						snmp_add_null_var(req, cur_oid->oid, cur_oid->oidlen);
-						cur_oid = cur_oid->next;
-					}
-
-					// send the get
-					if(!snmp_send(cur_snmp->sess, req)){
-						snmp_perror("snmp_send");
-						snmp_free_pdu(req);
-					}
-
-					// on verouille le process
-					*cur_snmp->lock = 1;
-
-					// on le positionne actif
-					cur_snmp->actif = 1;
-				}
-
-				// prepare l'heure de sortie de la fonction
-				// soustrait l'heure du prochain depart a l'heure actuelle
-				ecart.tv_usec = cur_snmp->activ_date.tv_usec -
-				                current_t.tv_usec;
-				ecart.tv_sec = cur_snmp->activ_date.tv_sec -
-				               current_t.tv_sec;
-				if(ecart.tv_usec < 0){
-					ecart.tv_usec += 1000000;
-					ecart.tv_sec -= 1;
-				}
-
-				if(time_comp(&ecart, &timeout)==-1){
-					timeout.tv_sec = ecart.tv_sec;
-					timeout.tv_usec = ecart.tv_usec;
-				}
-
-			} // fin du controle de verouillage
-
-			// next
-			cur_snmp = cur_snmp->next;
-		}
-		
-		// resette le bitfield
+		/* reset bitfield */
 		FD_ZERO(&fdset);
 
-		// positionne les fdset du snmp
+		/* get snmp max fd num, select bitfield, and timeout required
+		   if block is true, timeout is NULL */
 		snmp_select_info(&fds, &fdset, &ecart, &block);
 
-		// on verifie si le timeout des requetes snmp 
-		if(block == 0 && time_comp(&ecart, &timeout)==-1){
-			timeout.tv_sec = ecart.tv_sec;
-			timeout.tv_usec = ecart.tv_usec;
-			flag_tmout_snmp = 1;
-		} else {
-			flag_tmout_snmp = 0;
+		/* if snmp current requests timeout is little than current
+		   timeout, replace current, by this new one */
+		if (block == 0) {
+			if (timeout == NULL) {
+				timeout = &_timeout;
+				timeout->tv_sec  = ecart.tv_sec;
+				timeout->tv_usec = ecart.tv_usec;
+				flag_tmout_snmp = 1;
+			}
+			else if (time_comp(&ecart, timeout) == -1) {
+				timeout->tv_sec  = ecart.tv_sec;
+				timeout->tv_usec = ecart.tv_usec;
+				flag_tmout_snmp = 1;
+			}
 		}
 
-		// bloque
-		timeout.tv_usec += (1000000 / FREQ); 
+		/* timeout sanity check */
+		if (timeout != NULL) {
 
-		// si suite a une tres grosse charge,
-		// le timeout est negatif, on le remet à 0 
-		if(timeout.tv_sec < 0 || timeout.tv_usec < 0){
-			timeout.tv_usec = 0;
-			timeout.tv_sec = 0;
+			/* if the timeout is < 0, then dont execute select.
+			   this problem is encontered on multiproc hosts with tsc not
+			   synchronized (athlon dual core for example*/
+			if (timeout->tv_sec < 0 ||
+			    ( timeout->tv_sec == 0 && timeout->tv_usec < 0 ) ) {
+				logmsg(LOG_WARNING, "negative timeout detected");
+				fds = 0; /* 0 is timeout code */
+				continue;
+			}
+
+			/* check for tiemout range validity */
+			if (timeout->tv_usec > 999999) {
+				timeout->tv_sec += timeout->tv_usec / 1000000;
+				timeout->tv_usec %= 1000000;
+			}
 		}
 
-		if(timeout.tv_usec > 999999) {
-			timeout.tv_sec += timeout.tv_usec / 1000000;
-			timeout.tv_usec %= 1000000;
-		}
+		/* wait for next action */
+		fds = select(fds, &fdset, NULL, NULL, timeout);
 
-		fds = select(fds, &fdset, NULL, NULL, &timeout);
-
+		/* select errors */
 		if (fds < 0) {
+
+			/* log error and continue */
 			logmsg(LOG_ERR, "select: %s", strerror(errno));
-			exit(1);
+
+			/* if the consecutive number of error is > 20
+			   sleep a time */
+			if (loop_error > 20) {
+				logmsg(LOG_ERR, "sleep 1s while select error going out");
+				sleep(1);
+			}
+		
+			/* one more error */
+			loop_error++;
+			continue;
 		}
+
+		/* if no error, reset loop error counter */
+		loop_error = 0;
 	}
 
 	return 0;

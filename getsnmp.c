@@ -48,7 +48,7 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 	struct oid_list *cur_oid;
 	FILE *fd;
 	int code_ret;
-	unsigned int value;
+	unsigned long long int value;
 	time_t last_date;
 	struct tm *tm;
 	char cur_date[15];
@@ -63,92 +63,107 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 	if (operation == NETSNMP_CALLBACK_OP_RECEIVED_MESSAGE){
 		if (pdu->errstat == SNMP_ERR_NOERROR) {
 
-			// liste toutes les reponses
-			vp = pdu->variables;
-			while(vp){
-				// recherche la definition d'oid correspondante au retour
+			/* list all snmp responses */
+			for (vp = pdu->variables;
+			     vp != NULL;
+			     vp = vp->next_variable) {
+	
+				/* search oid matching return */
 				cur_oid = host->first_oid;
-				while(cur_oid != NULL &&
-				      memcmp(cur_oid->oid,
-				             vp->name_loc,
-				             vp->name_length * sizeof(oid)) != 0)
+				while (cur_oid != NULL &&
+				       memcmp(cur_oid->oid,
+				              vp->name_loc,
+				              vp->name_length * sizeof(oid)) != 0)
 					cur_oid = cur_oid->next;
 
-				if(cur_oid == NULL){
-					logmsg(LOG_ERR,
-					       "[%s %d] unknown oid",
-					       __FILE__, __LINE__);
-					break;
+				if (cur_oid == NULL) {
+					logmsg(LOG_ERR, "[%s %d] unknown oid", __FILE__, __LINE__);
+					continue;
 				}				
 
-				/* #define ASN_BOOLEAN      ((u_char)0x01)
-				 * #define ASN_INTEGER      ((u_char)0x02)
-				 * #define ASN_BIT_STR      ((u_char)0x03)
-				 * #define ASN_OCTET_STR       ((u_char)0x04)
-				 * #define ASN_NULL      ((u_char)0x05)
-				 * #define ASN_OBJECT_ID       ((u_char)0x06)
-				 * #define ASN_SEQUENCE     ((u_char)0x10)
-				 * #define ASN_SET          ((u_char)0x11)
+				/* retrieve value
 				 *
-				 * #define ASN_UNIVERSAL       ((u_char)0x00)
-				 * #define ASN_APPLICATION     ((u_char)0x40)
-				 * #define ASN_CONTEXT      ((u_char)0x80)
-				 * #define ASN_PRIVATE      ((u_char)0xC0)
+				 * supported ASN values:
 				 *
-				 * #define ASN_PRIMITIVE       ((u_char)0x00)
-				 * #define ASN_CONSTRUCTOR     ((u_char)0x20)
+				 * ASN_INTEGER
+				 * ASN_COUNTER
+				 * ASN_GAUGE
+				 * ASN_TIMETICKS
 				 *
-				 * #define ASN_LONG_LEN     (0x80)
-				 * #define ASN_EXTENSION_ID    (0x1F)
-				 * #define ASN_BIT8      (0x80)
+				 * ASN_COUNTER64
+				 *
 				 */
+				switch(vp->type){
 
-				// recupere la valeur a stocker
-				if(vp->val.integer == NULL){
-					logmsg(LOG_ERR,
-					       "error [%s] %s: type 0x%02x return NULL",
-					       host->sess->peername, cur_oid->oidname, vp->type);
-					snprintf(buf, sizeof(buf), "N:0");
-					value = 0;
-				} else {
-					switch(vp->type){
-						case ASN_OCTET_STR:
-							logmsg(LOG_ERR,
-							       "err type [0x%02x (string)]: %s",
-							       vp->type, cur_oid->oidname);
-							snprintf(buf, sizeof(buf), "N:0");
-							value = 0;
-							break;
+				/* general 32 bit value */
+				case ASN_INTEGER:
+				case ASN_COUNTER:
+				case ASN_GAUGE:
+				case ASN_TIMETICKS:
 
-						default:
-							snprintf(buf, sizeof(buf),
-							         "N:%u", (unsigned int)*vp->val.integer);
-							value = (unsigned int)*vp->val.integer;
+					/* check for data avalaibility */
+					if (vp->val.integer == NULL) {
+						logmsg(LOG_ERR,
+						       "error [%s] %s: type 0x%02x return NULL",
+						       host->sess->peername, cur_oid->oidname, vp->type);
+						continue;
 					}
+
+					/* get value */
+					value = *vp->val.integer;
+					break;
+
+				/* general 64 bit value */
+				case ASN_COUNTER64:
+
+					/* check for data avalaibility */
+					if (vp->val.counter64 == NULL) {
+						logmsg(LOG_ERR,
+						       "error [%s] %s: type 0x%02x return NULL",
+						       host->sess->peername, cur_oid->oidname, vp->type);
+						continue;
+					}
+
+					/* get value */
+					value   = vp->val.counter64->high;
+					value <<= 32;
+					value  |= vp->val.counter64->low;
+					break;
+
+				/* default: unknown|unsupported value */
+				default:
+					logmsg(LOG_ERR, "unsupported asn type 0x%02x for oid [%s]",
+					       vp->type, cur_oid->oidname);
+					continue;
 				}
 
 				#ifdef USE_RRD
-				// ===========================================================
-				// backend RRD
-				// ===========================================================
+				/*=============================================================
+
+				   backend RRD
+
+				=============================================================*/
 				if((cur_oid->backends & GETSNMP_RRD) != 0){
 
-					// balance la valeur dans une db rrdtool
+					/* build rrdtool data */
+					snprintf(buf, sizeof(buf), "N:%lld", value);
+					cur_oid->rrd_update[2] = buf;
+
+					/* update rrd database */
 					optind = 0;
 					opterr = 0;
 					rrd_clear_error();
-					cur_oid->rrd_update[2] = buf;
-
 					ix = rrd_update(3, cur_oid->rrd_update);
+
+					/* error case */
 					if (rrd_test_error() || (ix != 0)) {
 						logmsg(LOG_ERR,
 						       "rrd_update %s: %s",
 						       cur_oid->dbbase, rrd_get_error());
 
-						// le fichier n'existe pas, on le cree
+						/* check if database file exists */
 						ix = stat(cur_oid->dbbase, &st);
-						if(ix == -1 && errno == ENOENT){
-							// initilise rrd
+						if (ix == -1 && errno == ENOENT) {
 							optind = 0;
 							opterr = 0;
 							rrd_clear_error();
@@ -170,20 +185,22 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 								exit(1);
 							}
 						}
+
+						/* update rrd database */
 						ix = rrd_update(3, cur_oid->rrd_update);
 					}
 				}
 				#endif
 
-				// ===========================================================
-				//  balance les valeurs dans un fichier
-				// ===========================================================
+				/*=============================================================
+
+				   balance les valeurs dans un fichier
+
+				=============================================================*/
 				if((cur_oid->backends & GETSNMP_FILE) != 0){
 					
-					// conversion
-					
-					// open for append
-					if(cur_oid->rotate != FALSE) {
+					/* build filename in rotate case */
+					if (cur_oid->rotate != 0) {
 						last_date = (time_t)current_t.tv_sec;
 						last_date /= cur_oid->rotate;
 						last_date *= cur_oid->rotate;
@@ -193,34 +210,31 @@ int asynch_response(int operation, struct snmp_session *sp, int reqid,
 						         tm->tm_hour, tm->tm_min, tm->tm_sec);
 						memcpy(cur_oid->date_ptr, cur_date, 14);
 					}
+
+					/* open file */
 					fd = fopen(cur_oid->filename, "a");
-					if(fd == NULL){
+					if (fd == NULL) {
 						logmsg(LOG_ERR, "fopen(%s, \"a\")[%d]: %s",
 						       cur_oid->filename, errno, strerror(errno));
-						// exit(1);
+						continue;
 					}
 
-					// write values
-					fprintf(fd, "%u %s %u\n", 
+					/* write value */
+					fprintf(fd, "%u %s %lld\n", 
 					        (unsigned int)current_t.tv_sec,
-					        cur_oid->dataname,
-					        (unsigned int)value);
+					        cur_oid->dataname, value);
 
-					// close fd
+					/* close file */
 					code_ret = fclose(fd);
-					if(code_ret != 0){
+					if (code_ret != 0) {
 						logmsg(LOG_ERR, "fclose(%s)[%d]: %s",
 						       cur_oid->filename, errno, strerror(errno));
-						// exit(1);
+						continue;
 					}
-					
 				}
 
-				
-				// ===========================================================
-				//  end of back ends
-				// ===========================================================
-				vp = vp->next_variable;
+
+
 			}
 		}
 

@@ -1,3 +1,22 @@
+0.11     * FEAT: can use 64 bit counters
+         * FEAT: increase error log verbosity
+         * FEAT: dont quit program if select return an error. try to resolve error.
+         * FEAT: log warning if negative timeout is encoutered
+         * CLEANUP: code reorganization
+         * CLEANUP: normalize comments
+         * CLEANUP: remove unused debug info
+         * BUG: major: fix scheduler loop bug. When getsnmp do send at least two snmp request
+                       at the same hosts, and this does not respond, the snmp timeout cause
+                       bug in scheduler.
+         * BUG: minor: check for microseconds overflow (> 1000000) after adding 2 times
+         * BUG: minor: fix bug into negative time detection
+         * BUG: minor: log real getsnmp version
+         * BUG: minor: error in rotate value interpretation
+         * BUG: minor: bug in displaying rotate filenames
+         * BUG: minor: Use defines around rrd initialization string.
+                this initialization is not necessary if rrdtool is not compiled in
+         * BUG: minor: twice buffer initialization
+
 0.10     * can display expanded conf ( -s )
          * BUGFIX: memory crush
 

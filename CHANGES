@@ -1,4 +1,5 @@
 0.11     * FEAT: can use 64 bit counters
+         * FEAT: permit to specify global data filename. this is new inherited value
          * FEAT: increase error log verbosity
          * FEAT: dont quit program if select return an error. try to resolve error.
          * FEAT: log warning if negative timeout is encoutered
